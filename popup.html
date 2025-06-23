@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Companion Settings</title>
+  <link rel="stylesheet" href="popup-styles.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="header-content">
+        <div class="logo">🤖</div>
+        <div class="header-text">
+          <h1>AI Companion</h1>
+          <p>Your intelligent browsing assistant</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Settings -->
+    <main class="popup-main">
+      <!-- Status Section -->
+      <section class="status-section">
+        <div class="status-indicator">
+          <div id="status-dot" class="status-dot active"></div>
+          <span id="status-text">Active on this page</span>
+        </div>
+      </section>
+
+      <!-- Quick Controls -->
+      <section class="controls-section">
+        <div class="control-item">
+          <label class="toggle-label">
+            <input type="checkbox" id="companion-toggle" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Enable AI Companion</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="settings-section">
+        <h3>Settings</h3>
+        
+        <div class="setting-item">
+          <label for="scroll-sensitivity">Scroll Sensitivity</label>
+          <select id="scroll-sensitivity">
+            <option value="250">High (250ms)</option>
+            <option value="500" selected>Normal (500ms)</option>
+            <option value="1000">Low (1000ms)</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="bubble-duration">Speech Bubble Duration</label>
+          <select id="bubble-duration">
+            <option value="3000">3 seconds</option>
+            <option value="5000" selected>5 seconds</option>
+            <option value="8000">8 seconds</option>
+            <option value="0">Manual dismiss</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label class="checkbox-label">
+            <input type="checkbox" id="smart-responses" checked>
+            <span class="checkmark"></span>
+            <span>Smart contextual responses</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Statistics -->
+      <section class="stats-section">
+        <h3>Statistics</h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-value" id="scroll-count">-</span>
+            <span class="stat-label">Scroll events</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="interaction-count">-</span>
+            <span class="stat-label">Interactions</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="session-time">-</span>
+            <span class="stat-label">Session time</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="actions-section">
+        <button id="reset-position" class="action-button secondary">
+          📍 Reset Avatar Position
+        </button>
+        <button id="clear-history" class="action-button secondary">
+          🗑️ Clear Event History
+        </button>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <div class="footer-links">
+        <button id="about-btn" class="link-button">About</button>
+        <button id="help-btn" class="link-button">Help</button>
+        <button id="feedback-btn" class="link-button">Feedback</button>
+      </div>
+      <div class="version">v1.0.0</div>
+    </footer>
+  </div>
+
+  <!-- About Modal -->
+  <div id="about-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>About AI Companion</h2>
+        <button id="close-about" class="close-button">×</button>
+      </div>
+      <div class="modal-body">
+        <p>AI Companion is your intelligent browsing assistant that provides contextual help and insights while you browse the web.</p>
+        <p><strong>Features:</strong></p>
+        <ul>
+          <li>Real-time scroll detection and response</li>
+          <li>Floating avatar with drag-and-drop positioning</li>
+          <li>Smart contextual responses</li>
+          <li>Privacy-focused local processing</li>
+        </ul>
+        <p><strong>Privacy:</strong> All processing happens locally on your device. No data is sent to external servers.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
