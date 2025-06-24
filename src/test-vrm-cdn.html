@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>VRM Model Test (CSP Fixed)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Fix CSP issues -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com;
+    connect-src 'self' data: blob: https://cdn.jsdelivr.net https://unpkg.com;
+    img-src 'self' data: blob:;
+    style-src 'self' 'unsafe-inline';
+    worker-src 'self' blob:;
+    child-src 'self' blob:;
+  ">
+  
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #212121;
+    }
+    #container {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      max-width: 400px;
+      font-size: 14px;
+      z-index: 1000;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 1001;
+    }
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      z-index: 1000;
+    }
+    button {
+      background: #4CAF50;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .error {
+      color: #ff5555;
+    }
+    .success {
+      color: #55ff55;
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  
+  <div id="info">
+    <h2>VRM Model Test (CSP Fixed)</h2>
+    <p>Loading VRM models with proper CSP configuration</p>
+    <div id="status">Initializing...</div>
+  </div>
+  
+  <div id="loading">
+    <div>Loading Three.js and VRM libraries...</div>
+    <div id="progress">0%</div>
+  </div>
+
+  <div id="controls">
+    <button onclick="resetCamera()">Reset Camera</button>
+    <button onclick="toggleWireframe()">Toggle Wireframe</button>
+    <button onclick="toggleAnimation()">Toggle Animation</button>
+  </div>
+
+  <!-- Load libraries via script tags instead of import maps for better CSP compatibility -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.176.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.176.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <script>
+    // Global variables
+    let scene, camera, renderer, controls, clock;
+    let currentVRM = null;
+    let animationMixer = null;
+    let wireframeMode = false;
+    
+    const container = document.getElementById('container');
+    const statusElement = document.getElementById('status');
+    const loadingElement = document.getElementById('loading');
+    const progressElement = document.getElementById('progress');
+    
+    // Update status message
+    function updateStatus(message, type = 'info') {
+      statusElement.innerHTML = `<span class="${type}">${message}</span>`;
+      console.log(message);
+    }
+    
+    // Initialize scene
+    function initScene() {
+      updateStatus('Initializing Three.js scene...', 'info');
+      
+      // Create scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x212121);
+      
+      // Create camera
+      camera = new THREE.PerspectiveCamera(
+        30.0,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        20.0
+      );
+      camera.position.set(0.0, 1.0, 5.0);
+      
+      // Create renderer
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+      
+      // Create camera controls
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.screenSpacePanning = true;
+      controls.target.set(0.0, 1.0, 0.0);
+      controls.update();
+      
+      // Add lights
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(1.0, 1.0, 1.0).normalize();
+      directionalLight.castShadow = true;
+      scene.add(directionalLight);
+      
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+      scene.add(ambientLight);
+      
+      // Add grid helper
+      const gridHelper = new THREE.GridHelper(10, 10);
+      scene.add(gridHelper);
+      
+      // Create clock
+      clock = new THREE.Clock();
+      
+      updateStatus('Scene initialized, loading VRM...', 'info');
+      loadVRMModel();
+    }
+    
+    // Load VRM model with fallback options
+    function loadVRMModel() {
+      const modelUrls = [
+        'models/7062840423830520603.vrm',
+        'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@dev/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm',
+        'https://pixiv.github.io/three-vrm/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm'
+      ];
+      
+      tryLoadModel(modelUrls, 0);
+    }
+    
+    function tryLoadModel(urls, index) {
+      if (index >= urls.length) {
+        updateStatus('Failed to load any VRM model', 'error');
+        loadingElement.style.display = 'none';
+        return;
+      }
+      
+      const modelUrl = urls[index];
+      updateStatus(`Attempting to load: ${modelUrl}`, 'info');
+      
+      // Create GLTF loader
+      const loader = new THREE.GLTFLoader();
+      
+      // Load the model
+      loader.load(
+        modelUrl,
+        (gltf) => {
+          updateStatus('Model loaded successfully!', 'success');
+          loadingElement.style.display = 'none';
+          
+          // Process the loaded model
+          processLoadedModel(gltf);
+        },
+        (progress) => {
+          if (progress.total > 0) {
+            const percent = Math.round((progress.loaded / progress.total) * 100);
+            progressElement.textContent = `${percent}%`;
+          }
+        },
+        (error) => {
+          console.error(`Failed to load ${modelUrl}:`, error);
+          updateStatus(`Failed to load ${modelUrl}, trying next...`, 'error');
+          setTimeout(() => tryLoadModel(urls, index + 1), 1000);
+        }
+      );
+    }
+    
+    function processLoadedModel(gltf) {
+      // Add the model to the scene
+      const model = gltf.scene;
+      
+      // Scale and position the model
+      model.scale.setScalar(1);
+      model.position.set(0, 0, 0);
+      
+      // Enable shadows
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          child.frustumCulled = false;
+        }
+      });
+      
+      scene.add(model);
+      currentVRM = { scene: model };
+      
+      // Set up animation mixer if animations exist
+      if (gltf.animations && gltf.animations.length > 0) {
+        animationMixer = new THREE.AnimationMixer(model);
+        const action = animationMixer.clipAction(gltf.animations[0]);
+        action.play();
+        updateStatus('Model loaded with animations!', 'success');
+      } else {
+        updateStatus('Model loaded (no animations)', 'success');
+      }
+      
+      // Adjust camera to fit the model
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fov = camera.fov * (Math.PI / 180);
+      let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+      cameraZ *= 2; // Add some padding
+      
+      camera.position.set(center.x, center.y + size.y * 0.3, center.z + cameraZ);
+      controls.target.copy(center);
+      controls.update();
+    }
+    
+    // Control functions
+    function resetCamera() {
+      if (currentVRM) {
+        const box = new THREE.Box3().setFromObject(currentVRM.scene);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = camera.fov * (Math.PI / 180);
+        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+        cameraZ *= 2;
+        
+        camera.position.set(center.x, center.y + size.y * 0.3, center.z + cameraZ);
+        controls.target.copy(center);
+        controls.update();
+      }
+    }
+    
+    function toggleWireframe() {
+      if (!currentVRM) return;
+      
+      wireframeMode = !wireframeMode;
+      currentVRM.scene.traverse((child) => {
+        if (child.isMesh) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => mat.wireframe = wireframeMode);
+          } else {
+            child.material.wireframe = wireframeMode;
+          }
+        }
+      });
+      
+      updateStatus(`Wireframe: ${wireframeMode ? 'ON' : 'OFF'}`, 'info');
+    }
+    
+    function toggleAnimation() {
+      if (animationMixer) {
+        const actions = animationMixer._actions;
+        if (actions.length > 0) {
+          if (actions[0].isRunning()) {
+            actions.forEach(action => action.stop());
+            updateStatus('Animation stopped', 'info');
+          } else {
+            actions.forEach(action => action.play());
+            updateStatus('Animation started', 'info');
+          }
+        }
+      }
+    }
+    
+    // Handle window resize
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const delta = clock.getDelta();
+      
+      // Update animation mixer
+      if (animationMixer) {
+        animationMixer.update(delta);
+      }
+      
+      // Update controls
+      controls.update();
+      
+      // Render
+      renderer.render(scene, camera);
+    }
+    
+    // Event listeners
+    window.addEventListener('resize', onWindowResize);
+    
+    // Start the application
+    document.addEventListener('DOMContentLoaded', () => {
+      updateStatus('DOM loaded, initializing...', 'info');
+      initScene();
+      animate();
+    });
+    
+    // Initialize immediately if DOM is already loaded
+    if (document.readyState === 'loading') {
+      // DOM is still loading
+    } else {
+      // DOM is already loaded
+      updateStatus('Starting initialization...', 'info');
+      initScene();
+      animate();
+    }
+  </script>
+</body>
+</html>

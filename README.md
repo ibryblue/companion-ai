@@ -208,6 +208,15 @@ chrome.runtime.sendMessage({
 - [ ] Avatar position resets correctly
 - [ ] Event history clears properly
 
+#### VRM Model Testing
+- [ ] VRM toggle enables 3D avatar mode
+- [ ] Upload VRM model functionality works
+- [ ] Uploaded models appear in the model list
+- [ ] Model selection changes the active avatar
+- [ ] Delete model functionality works properly
+- [ ] VRM models persist after browser restart
+- [ ] 3D avatar animates and responds to events
+
 #### Cross-Site Testing
 - [ ] Works on HTTP sites
 - [ ] Works on HTTPS sites

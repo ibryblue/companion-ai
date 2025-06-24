@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com">
+  <title>AI Companion Settings</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/popup-styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI Companion</h1>
+      <p>Your intelligent browser assistant</p>
+      <div id="status-indicator" class="status-disabled">Disabled</div>
+    </header>
+    
+    <section>
+      <div class="card">
+        <div class="control-group">
+          <span class="control-label">Enable Companion</span>
+          <label class="switch">
+            <input type="checkbox" id="companion-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="control-group">
+          <span class="control-label">Mute Responses</span>
+          <label class="switch">
+            <input type="checkbox" id="mute-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="control-group">
+          <span class="control-label">Use AI Responses</span>
+          <label class="switch">
+            <input type="checkbox" id="ai-toggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="control-group">
+          <span class="control-label">Use 3D VRM Avatar</span>
+          <label class="switch">
+            <input type="checkbox" id="vrm-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>Select Character</h2>
+        <div class="character-grid" id="character-grid">
+          <div class="character-option selected" data-character="Zoro">
+            <img src="images/avatars/zoro.gif" alt="Zoro">
+            <span>Zoro</span>
+          </div>
+          <div class="character-option" data-character="Batman">
+            <img src="images/avatars/batman.gif" alt="Batman">
+            <span>Batman</span>
+          </div>
+          <div class="character-option" data-character="Morty">
+            <img src="images/avatars/morty.gif" alt="Morty">
+            <span>Morty</span>
+          </div>
+          <div class="character-option" data-character="Maomao">
+            <img src="images/avatars/cheerful-girl.gif" alt="Maomao">
+            <span>Maomao</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>Settings</h2>
+        <div>
+          <label for="response-frequency">Response Frequency</label>
+          <select id="response-frequency">
+            <option value="25">Low (Rarely)</option>
+            <option value="50" selected>Medium (Default)</option>
+            <option value="75">High (Often)</option>
+          </select>
+        </div>
+        
+        <div style="margin-top: 1rem;">
+          <label for="response-duration">Response Duration</label>
+          <select id="response-duration">
+            <option value="3">Short (3s)</option>
+            <option value="5" selected>Medium (5s)</option>
+            <option value="8">Long (8s)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="card" id="vrm-controls">
+        <h2>VRM Models</h2>
+        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">Upload and manage your 3D VRM avatar models</p>
+        
+        <div style="margin-bottom: 1rem;">
+          <input type="file" id="vrm-file-input" accept=".vrm" style="display: none;">
+          <button id="upload-vrm-btn" class="primary-button">Upload VRM Model</button>
+          <button id="use-sample-vrm-btn" class="secondary-button" style="margin-left: 10px;">Use Sample VRM</button>
+          <p id="upload-status" style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); height: 18px;"></p>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <label for="vrm-models">Select VRM Model</label>
+          <select id="vrm-models">
+            <option value="">No models available</option>
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <button id="clear-vrm-btn" class="secondary-button">Clear All VRM Models</button>
+        </div>
+      </div>
+    </section>
+    
+    <footer>
+      <button id="reset-btn" class="btn">Reset Settings</button>
+      <div class="version">v1.0.0</div>
+    </footer>
+  </div>
+  
+  <script src="js/popup.js"></script>
+</body>
+</html> 
