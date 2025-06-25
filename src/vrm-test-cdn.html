@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>VRM Model Test (CDN Version)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background-color: #212121;
+      color: white;
+    }
+    #container {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+      max-width: 400px;
+      z-index: 100;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 101;
+    }
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+    }
+    button {
+      background: #4CAF50;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .error {
+      color: #ff5555;
+      margin-top: 10px;
+    }
+    .success {
+      color: #55ff55;
+    }
+    select {
+      background: #333;
+      color: white;
+      padding: 5px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <div id="info">
+    <h2>VRM Model Test (CDN Version)</h2>
+    <p>Testing VRM model rendering with CDN libraries</p>
+    <div id="status">Loading libraries...</div>
+    <div id="error-details" class="error"></div>
+    
+    <div style="margin-top: 15px;">
+      <select id="model-select">
+        <option value="sample">Sample VRM from CDN</option>
+        <option value="local">Local model (may not work)</option>
+      </select>
+      <button id="load-model">Load Model</button>
+    </div>
+  </div>
+  <div id="loading">Loading Three.js and VRM libraries...</div>
+  <div id="controls">
+    <button id="reset-camera">Reset Camera</button>
+    <button id="toggle-wireframe">Toggle Wireframe</button>
+    <button id="toggle-rotation">Toggle Rotation</button>
+  </div>
+
+  <!-- Load libraries directly from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.151.3/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.151.3/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.151.3/examples/js/controls/OrbitControls.js"></script>
+  
+  <!-- The CDN module version doesn't work well with GLTFLoader in non-module context -->
+  <!-- Instead we use the UMD version which works better -->
+  <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@1.0.9/lib/three-vrm.js"></script>
+  
+  <script>
+    // Main container
+    const container = document.getElementById('container');
+    const statusElement = document.getElementById('status');
+    const errorDetailsElement = document.getElementById('error-details');
+    const loadingElement = document.getElementById('loading');
+    const modelSelect = document.getElementById('model-select');
+    const loadModelButton = document.getElementById('load-model');
+    
+    // Sample VRM model from the web (hosted on CDN, avoids CORS issues)
+    const SAMPLE_VRM_URL = 'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@dev/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm';
+    const LOCAL_VRM_URL = 'models/7062840423830520603.vrm';
+    
+    // Update status message
+    function updateStatus(message, type = 'info') {
+      statusElement.textContent = message;
+      
+      // Reset colors
+      statusElement.className = '';
+      
+      if (type === 'error') {
+        statusElement.className = 'error';
+      } else if (type === 'success') {
+        statusElement.className = 'success';
+      }
+      
+      console.log(message);
+    }
+    
+    function showErrorDetails(message) {
+      errorDetailsElement.textContent = message;
+    }
+    
+    // Scene variables
+    let scene, camera, renderer, controls, clock;
+    let currentVRM = null;
+    let isRotating = true;
+    let wireframeMode = false;
+    let isInitialized = false;
+    
+    // Initialize Three.js scene
+    function initScene() {
+      if (!window.THREE) {
+        updateStatus('THREE not available after loading', 'error');
+        showErrorDetails('The Three.js library failed to load properly.');
+        return;
+      }
+      
+      // If already initialized, just return
+      if (isInitialized) return;
+      
+      updateStatus('Libraries loaded, initializing scene');
+      
+      // Create scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x212121);
+      
+      // Create camera
+      camera = new THREE.PerspectiveCamera(
+        30.0,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        20.0
+      );
+      camera.position.set(0.0, 1.0, 5.0);
+      
+      // Create renderer
+      renderer = new THREE.WebGLRenderer({
+        antialias: true
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      container.appendChild(renderer.domElement);
+      
+      // Add camera controls
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 1, 0);
+      controls.update();
+      
+      // Add lights
+      const light = new THREE.DirectionalLight(0xffffff, Math.PI);
+      light.position.set(1.0, 1.0, 1.0).normalize();
+      scene.add(light);
+      
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+      
+      // Add grid helper
+      const gridHelper = new THREE.GridHelper(10, 10);
+      scene.add(gridHelper);
+      
+      // Add axes helper
+      const axesHelper = new THREE.AxesHelper(5);
+      scene.add(axesHelper);
+      
+      // Create clock
+      clock = new THREE.Clock();
+      clock.start();
+      
+      // Handle window resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+      
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        const delta = clock.getDelta();
+        
+        // Update VRM
+        if (currentVRM && currentVRM.update) {
+          currentVRM.update(delta);
+        }
+        
+        // Rotate model if enabled
+        if (isRotating && currentVRM && currentVRM.scene) {
+          currentVRM.scene.rotation.y += 0.005;
+        }
+        
+        // Update controls
+        controls.update();
+        
+        renderer.render(scene, camera);
+      }
+      
+      // Start animation loop
+      animate();
+      
+      // Mark as initialized
+      isInitialized = true;
+      
+      // Setup control buttons
+      setupControls();
+      
+      updateStatus('Scene initialized successfully', 'success');
+    }
+    
+    // Load VRM model
+    function loadVRMModel(modelUrl) {
+      // Initialize scene if not already
+      if (!isInitialized) {
+        initScene();
+      }
+      
+      // Clear any existing model
+      if (currentVRM && currentVRM.scene) {
+        scene.remove(currentVRM.scene);
+        currentVRM = null;
+      }
+      
+      loadingElement.style.display = 'block';
+      loadingElement.textContent = 'Loading VRM model...';
+      updateStatus(`Loading VRM model: ${modelUrl}`);
+      errorDetailsElement.textContent = '';
+      
+      const loader = new THREE.GLTFLoader();
+      loader.crossOrigin = 'anonymous';
+      
+      // Check which VRM loader to use
+      if (window.THREE_VRM) {
+        updateStatus('Using THREE_VRM global');
+        // For UMD builds
+        loader.register((parser) => {
+          return new THREE_VRM.VRMLoaderPlugin(parser);
+        });
+      } else if (window.VRM) {
+        updateStatus('Using VRM global');
+        loader.register((parser) => {
+          return new VRM.VRMLoaderPlugin(parser);
+        });
+      } else {
+        updateStatus('VRMLoaderPlugin not available, model may not load correctly', 'error');
+        showErrorDetails('VRM libraries not loaded properly. Try refreshing the page.');
+      }
+      
+      // Load the model
+      loader.load(
+        modelUrl,
+        (gltf) => {
+          loadingElement.style.display = 'none';
+          updateStatus('GLTF model loaded, processing...');
+          
+          // Handle VRM data in different possible locations based on the library version
+          if (gltf.userData && gltf.userData.vrm) {
+            // Standard location
+            currentVRM = gltf.userData.vrm;
+            updateStatus('VRM model processed successfully', 'success');
+            scene.add(currentVRM.scene);
+          } else if (window.VRM && window.VRM.from) {
+            // Try to use VRM.from() for older versions
+            window.VRM.from(gltf).then((vrm) => {
+              currentVRM = vrm;
+              scene.add(vrm.scene);
+              updateStatus('VRM model processed using VRM.from()', 'success');
+            });
+          } else if (window.THREE_VRM && window.THREE_VRM.VRM && window.THREE_VRM.VRM.from) {
+            // Try for THREE_VRM global
+            window.THREE_VRM.VRM.from(gltf).then((vrm) => {
+              currentVRM = vrm;
+              scene.add(vrm.scene);
+              updateStatus('VRM model processed using THREE_VRM.VRM.from()', 'success');
+            });
+          } else {
+            // Fallback to just using the GLTF scene
+            updateStatus('No VRM data found, using raw GLTF scene', 'error');
+            showErrorDetails('The model was loaded but no VRM data was found. It may not be a valid VRM file.');
+            
+            currentVRM = {
+              scene: gltf.scene,
+              update: null
+            };
+            scene.add(gltf.scene);
+          }
+        },
+        (progress) => {
+          const percent = progress.total > 0 ? Math.round(progress.loaded / progress.total * 100) : 0;
+          loadingElement.textContent = `Loading model: ${percent}%`;
+        },
+        (error) => {
+          loadingElement.style.display = 'none';
+          updateStatus('Error loading VRM model', 'error');
+          showErrorDetails(error.message || 'Unknown error loading the model');
+          console.error('Full error:', error);
+          
+          if (modelUrl === LOCAL_VRM_URL) {
+            errorDetailsElement.innerHTML += '<br><br>Try using the Sample VRM from CDN option instead, which avoids CORS issues.';
+          }
+        }
+      );
+    }
+    
+    // Setup control buttons
+    function setupControls() {
+      // Reset camera button
+      document.getElementById('reset-camera').addEventListener('click', () => {
+        camera.position.set(0.0, 1.0, 5.0);
+        controls.target.set(0, 1, 0);
+        controls.update();
+      });
+      
+      // Toggle wireframe button
+      document.getElementById('toggle-wireframe').addEventListener('click', () => {
+        wireframeMode = !wireframeMode;
+        
+        if (currentVRM && currentVRM.scene) {
+          currentVRM.scene.traverse((obj) => {
+            if (obj.isMesh) {
+              if (Array.isArray(obj.material)) {
+                obj.material.forEach(mat => mat.wireframe = wireframeMode);
+              } else if (obj.material) {
+                obj.material.wireframe = wireframeMode;
+              }
+            }
+          });
+        }
+        
+        updateStatus(`Wireframe mode: ${wireframeMode ? 'ON' : 'OFF'}`);
+      });
+      
+      // Toggle rotation button
+      document.getElementById('toggle-rotation').addEventListener('click', () => {
+        isRotating = !isRotating;
+        updateStatus(`Auto rotation: ${isRotating ? 'ON' : 'OFF'}`);
+      });
+      
+      // Load model button
+      loadModelButton.addEventListener('click', () => {
+        const modelType = modelSelect.value;
+        const modelUrl = modelType === 'sample' ? SAMPLE_VRM_URL : LOCAL_VRM_URL;
+        loadVRMModel(modelUrl);
+      });
+    }
+    
+    // Wait for all scripts to load then initialize
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        initScene();
+        
+        // Load sample model by default to avoid CORS issues
+        loadVRMModel(SAMPLE_VRM_URL);
+      }, 500);
+    });
+  </script>
+</body>
+</html> 

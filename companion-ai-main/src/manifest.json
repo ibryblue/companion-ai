@@ -1,0 +1,70 @@
+{
+  "manifest_version": 3,
+  "name": "AI Companion - Real-Time Assistant",
+  "version": "1.0.0",
+  "description": "Your intelligent companion that provides real-time assistance while browsing the web",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  
+  "background": {
+    "service_worker": "js/background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/vrm-bundle.js", "js/content.js"],
+      "css": ["css/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup-simple.html",
+    "default_title": "AI Companion Settings",
+    "default_icon": {
+      "16": "images/icons/icon16.jpg",
+      "32": "images/icons/icon32.jpg",
+      "48": "images/icons/icon48.jpg",
+      "128": "images/icons/icon128.jpg"
+    }
+  },
+  
+  "icons": {
+    "16": "images/icons/icon16.jpg",
+    "32": "images/icons/icon32.jpg",
+    "48": "images/icons/icon48.jpg",
+    "128": "images/icons/icon128.jpg"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "images/avatars/*.gif",
+        "images/avatars/*.png",
+        "images/icons/*.jpg",
+        "images/icons/*.png",
+        "models/*.vrm",
+        "lib/*.js",
+        "css/*.css",
+        "js/*.js",
+        "dist/*.js",
+        "src/models/*.vrm"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com"
+  }
+}

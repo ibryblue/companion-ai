@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Companion UI Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    
+    .test-container {
+      width: 100%;
+      max-width: 800px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    
+    .description {
+      margin-bottom: 30px;
+      color: #666;
+      line-height: 1.5;
+    }
+    
+    .ui-preview {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 30px;
+    }
+    
+    .ui-preview iframe {
+      width: 350px;
+      height: 500px;
+      border: none;
+      margin: 0 auto;
+      display: block;
+    }
+    
+    .theme-toggle {
+      margin-bottom: 20px;
+    }
+    
+    button {
+      background-color: #4f46e5;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    
+    button:hover {
+      background-color: #4338ca;
+    }
+    
+    .info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8fafc;
+      border-radius: 6px;
+      border-left: 4px solid #4f46e5;
+    }
+    
+    .info h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    
+    .info p {
+      margin-bottom: 0;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>AI Companion UI Preview</h1>
+    
+    <div class="description">
+      <p>This page displays the redesigned AI Companion browser extension UI with modern styling and improved user experience.</p>
+    </div>
+    
+    <div class="theme-toggle">
+      <button id="light-theme">Light Theme</button>
+      <button id="dark-theme">Dark Theme</button>
+      <button id="system-theme">System Theme</button>
+    </div>
+    
+    <div class="ui-preview">
+      <iframe src="popup-simple.html" id="preview-frame"></iframe>
+    </div>
+    
+    <div class="info">
+      <h3>Design Improvements</h3>
+      <ul>
+        <li>Modern, clean interface with consistent spacing</li>
+        <li>Improved toggle switches for better visual feedback</li>
+        <li>Character selection with proper visual hierarchy</li>
+        <li>Responsive layout that adapts to different screen sizes</li>
+        <li>Proper dark mode support based on system preferences</li>
+        <li>Consistent typography using Inter font</li>
+        <li>Better visual separation between sections</li>
+      </ul>
+    </div>
+  </div>
+  
+  <script>
+    document.getElementById('light-theme').addEventListener('click', () => {
+      const iframe = document.getElementById('preview-frame');
+      iframe.contentWindow.document.documentElement.classList.remove('dark-theme');
+      iframe.contentWindow.document.documentElement.classList.add('light-theme');
+    });
+    
+    document.getElementById('dark-theme').addEventListener('click', () => {
+      const iframe = document.getElementById('preview-frame');
+      iframe.contentWindow.document.documentElement.classList.remove('light-theme');
+      iframe.contentWindow.document.documentElement.classList.add('dark-theme');
+    });
+    
+    document.getElementById('system-theme').addEventListener('click', () => {
+      const iframe = document.getElementById('preview-frame');
+      iframe.contentWindow.document.documentElement.classList.remove('light-theme');
+      iframe.contentWindow.document.documentElement.classList.remove('dark-theme');
+    });
+  </script>
+</body>
+</html> 

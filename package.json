@@ -1,0 +1,28 @@
+{
+  "name": "ai-companion",
+  "version": "1.0.0",
+  "description": "AI Companion - Real-Time Assistant Chrome Extension",
+  "main": "src/js/background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --config webpack.config.js",
+    "watch": "webpack --watch --config webpack.config.js",
+    "start": "npm run build && echo \"Load the extension from the dist directory in Chrome\""
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "three": "0.151.3",
+    "@pixiv/three-vrm": "^1.0.9",
+    "@pixiv/three-vrm-core": "^1.0.9",
+    "@pixiv/three-vrm-materials-mtoon": "^1.0.9",
+    "@pixiv/three-vrm-materials-hdr-emissive-multiplier": "^1.0.9",
+    "@pixiv/three-vrm-materials-v0compat": "^1.0.9",
+    "@pixiv/three-vrm-node-constraint": "^1.0.9",
+    "@pixiv/three-vrm-springbone": "^1.0.9"
+  },
+  "devDependencies": {
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  }
+} 

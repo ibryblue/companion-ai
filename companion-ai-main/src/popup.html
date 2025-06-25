@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Companion Settings</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/popup-styles.css">
+  <style>
+    html, body {
+      width: 350px;
+      height: 500px;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI Companion</h1>
+      <p class="subtitle">Your intelligent browser assistant</p>
+    </header>
+    
+    <section class="main-controls">
+      <div class="control-group">
+        <span class="control-label">Enable Companion</span>
+        <label class="switch">
+          <input type="checkbox" id="companion-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <span class="control-label">Mute Responses</span>
+        <label class="switch">
+          <input type="checkbox" id="mute-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <span class="control-label">Use AI Responses</span>
+        <label class="switch">
+          <input type="checkbox" id="ai-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <span class="control-label">Use 3D VRM Avatar</span>
+        <label class="switch">
+          <input type="checkbox" id="vrm-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </section>
+    
+    <section class="character-selection">
+      <h2>Select Character</h2>
+      <div class="character-grid">
+        <div class="character-option" data-character="Zoro">
+          <img src="images/avatars/zoro.gif" alt="Zoro">
+          <span>Zoro</span>
+        </div>
+        <div class="character-option" data-character="Batman">
+          <img src="images/avatars/batman.gif" alt="Batman">
+          <span>Batman</span>
+        </div>
+        <div class="character-option" data-character="Morty">
+          <img src="images/avatars/morty.gif" alt="Morty">
+          <span>Morty</span>
+        </div>
+        <div class="character-option" data-character="Maomao">
+          <img src="images/avatars/cheerful-girl.gif" alt="Maomao">
+          <span>Maomao</span>
+        </div>
+      </div>
+    </section>
+    
+    <section class="vrm-controls">
+      <h2>VRM Models</h2>
+      <p class="info-text">Upload and manage your 3D VRM avatar models</p>
+      
+      <div class="upload-container">
+        <input type="file" id="vrm-file-input" accept=".vrm" style="display: none;">
+        <button id="upload-vrm-btn" class="primary-button">Upload VRM Model</button>
+        <p class="upload-status" id="upload-status"></p>
+      </div>
+      
+      <div class="vrm-model-list" id="vrm-model-list">
+        <p class="empty-state" id="no-models-message">No VRM models available</p>
+        <!-- VRM models will be populated here -->
+      </div>
+      
+      <template id="vrm-model-template">
+        <div class="vrm-model-item">
+          <div class="vrm-model-preview">
+            <div class="vrm-thumbnail">3D</div>
+          </div>
+          <div class="vrm-model-info">
+            <h3 class="vrm-model-name"></h3>
+            <p class="vrm-model-source"></p>
+          </div>
+          <div class="vrm-model-actions">
+            <button class="select-vrm-btn">Select</button>
+          </div>
+        </div>
+      </template>
+    </section>
+    
+    <section class="settings">
+      <h2>Settings</h2>
+      
+      <div class="setting-group">
+        <label for="response-frequency">Response Frequency</label>
+        <select id="response-frequency">
+          <option value="low">Low (Rarely)</option>
+          <option value="medium" selected>Medium (Default)</option>
+          <option value="high">High (Often)</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label for="response-duration">Response Duration</label>
+        <select id="response-duration">
+          <option value="3000">Short (3s)</option>
+          <option value="5000" selected>Medium (5s)</option>
+          <option value="8000">Long (8s)</option>
+        </select>
+      </div>
+    </section>
+    
+    <footer>
+      <button id="reset-btn" class="secondary-button">Reset All Settings</button>
+      <div class="version">v1.0.0</div>
+    </footer>
+  </div>
+  
+  <script src="js/popup.js"></script>
+</body>
+</html>

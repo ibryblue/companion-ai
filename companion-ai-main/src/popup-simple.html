@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-eval' blob:; img-src 'self' data:; connect-src *;">
+  <title>AI Companion Settings</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/popup-styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI Companion</h1>
+      <p>Your intelligent browser assistant</p>
+      <div id="status-indicator" class="status-disabled">Disabled</div>
+    </header>
+    
+    <section>
+      <div class="card">
+        <div class="control-group">
+          <span class="control-label">Enable Companion</span>
+          <label class="switch">
+            <input type="checkbox" id="companion-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="control-group">
+          <span class="control-label">Mute Responses</span>
+          <label class="switch">
+            <input type="checkbox" id="mute-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="control-group">
+          <span class="control-label">Use AI Responses</span>
+          <label class="switch">
+            <input type="checkbox" id="ai-toggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="control-group">
+          <span class="control-label">Use 3D VRM Avatar</span>
+          <label class="switch">
+            <input type="checkbox" id="vrm-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>Select Character</h2>
+        <div class="character-grid" id="character-grid">
+          <div class="character-option selected" data-character="Zoro">
+            <img src="images/avatars/zoro.gif" alt="Zoro">
+            <span>Zoro</span>
+          </div>
+          <div class="character-option" data-character="Batman">
+            <img src="images/avatars/batman.gif" alt="Batman">
+            <span>Batman</span>
+          </div>
+          <div class="character-option" data-character="Morty">
+            <img src="images/avatars/morty.gif" alt="Morty">
+            <span>Morty</span>
+          </div>
+          <div class="character-option" data-character="Maomao">
+            <img src="images/avatars/cheerful-girl.gif" alt="Maomao">
+            <span>Maomao</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>Settings</h2>
+        <div>
+          <label for="response-frequency">Response Frequency</label>
+          <select id="response-frequency">
+            <option value="25">Low (Rarely)</option>
+            <option value="50" selected>Medium (Default)</option>
+            <option value="75">High (Often)</option>
+          </select>
+        </div>
+        
+        <div style="margin-top: 1rem;">
+          <label for="response-duration">Response Duration</label>
+          <select id="response-duration">
+            <option value="3">Short (3s)</option>
+            <option value="5" selected>Medium (5s)</option>
+            <option value="8">Long (8s)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="card" id="vrm-controls">
+        <h2>VRM Models</h2>
+        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">3D VRM avatar models</p>
+        
+        <!-- VRM Preview Area -->
+        <div id="vrm-preview-container" style="width: 100%; height: 300px; background-color: #2a2a2a; border-radius: 8px; margin-bottom: 1rem; position: relative; overflow: hidden;">
+          <!-- 3D model will be rendered here -->
+        </div>
+        
+        <!-- Model Selection Area -->
+        <div style="margin-bottom: 1rem; display: flex; align-items: center;">
+          <select id="model-select" style="flex-grow: 1; background: var(--input-bg, #333); color: var(--text-primary, white); padding: 8px; border: 1px solid var(--border-color, #555); border-radius: 4px;">
+            <option value="sample">Sample VRM from CDN</option>
+            <option value="local">Local VRM model</option>
+          </select>
+          <button id="load-model" class="primary-button" style="margin-left: 10px;">Load Model</button>
+        </div>
+        
+        <div id="status-container" style="margin: 10px 0; font-size: 0.875rem;"></div>
+        <div id="error-container" style="margin: 5px 0; font-size: 0.75rem; color: var(--error-color, #ff5555);"></div>
+        
+        <div style="margin-top: 1rem;">
+          <input type="file" id="vrm-file-input" accept=".vrm" style="display: none;">
+          <button id="upload-vrm" class="secondary-button" style="margin-right: 5px;">Upload VRM</button>
+          <button id="toggle-rotation" class="secondary-button" style="margin-right: 5px;">Stop Rotation</button>
+          <button id="reset-camera" class="secondary-button">Reset View</button>
+        </div>
+      </div>
+    </section>
+    
+    <footer>
+      <button id="reset-btn" class="btn">Reset Settings</button>
+      <div class="version">v1.0.0</div>
+    </footer>
+  </div>
+  
+  <!-- Load scripts directly to avoid CSP issues -->
+  <script src="dist/vrm-bundle.js"></script>
+  <script src="js/popup-vrm-viewer.js"></script>
+  <script src="js/popup.js"></script>
+</body>
+</html> 
