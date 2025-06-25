@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-eval' blob:; img-src 'self' data:; connect-src *;">
   <title>AI Companion Settings</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/popup-styles.css">
@@ -96,24 +96,30 @@
       
       <div class="card" id="vrm-controls">
         <h2>VRM Models</h2>
-        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">Upload and manage your 3D VRM avatar models</p>
+        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">3D VRM avatar models</p>
         
-        <div style="margin-bottom: 1rem;">
-          <input type="file" id="vrm-file-input" accept=".vrm" style="display: none;">
-          <button id="upload-vrm-btn" class="primary-button">Upload VRM Model</button>
-          <button id="use-sample-vrm-btn" class="secondary-button" style="margin-left: 10px;">Use Sample VRM</button>
-          <p id="upload-status" style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); height: 18px;"></p>
+        <!-- VRM Preview Area -->
+        <div id="vrm-preview-container" style="width: 100%; height: 300px; background-color: #2a2a2a; border-radius: 8px; margin-bottom: 1rem; position: relative; overflow: hidden;">
+          <!-- 3D model will be rendered here -->
         </div>
         
-        <div style="margin-bottom: 1rem;">
-          <label for="vrm-models">Select VRM Model</label>
-          <select id="vrm-models">
-            <option value="">No models available</option>
+        <!-- Model Selection Area -->
+        <div style="margin-bottom: 1rem; display: flex; align-items: center;">
+          <select id="model-select" style="flex-grow: 1; background: var(--input-bg, #333); color: var(--text-primary, white); padding: 8px; border: 1px solid var(--border-color, #555); border-radius: 4px;">
+            <option value="sample">Sample VRM from CDN</option>
+            <option value="local">Local VRM model</option>
           </select>
+          <button id="load-model" class="primary-button" style="margin-left: 10px;">Load Model</button>
         </div>
         
-        <div style="margin-bottom: 1rem;">
-          <button id="clear-vrm-btn" class="secondary-button">Clear All VRM Models</button>
+        <div id="status-container" style="margin: 10px 0; font-size: 0.875rem;"></div>
+        <div id="error-container" style="margin: 5px 0; font-size: 0.75rem; color: var(--error-color, #ff5555);"></div>
+        
+        <div style="margin-top: 1rem;">
+          <input type="file" id="vrm-file-input" accept=".vrm" style="display: none;">
+          <button id="upload-vrm" class="secondary-button" style="margin-right: 5px;">Upload VRM</button>
+          <button id="toggle-rotation" class="secondary-button" style="margin-right: 5px;">Stop Rotation</button>
+          <button id="reset-camera" class="secondary-button">Reset View</button>
         </div>
       </div>
     </section>
@@ -124,6 +130,9 @@
     </footer>
   </div>
   
+  <!-- Load scripts directly to avoid CSP issues -->
+  <script src="../dist/vrm-bundle.js"></script>
+  <script src="js/popup-vrm-viewer.js"></script>
   <script src="js/popup.js"></script>
 </body>
 </html> 

@@ -297,10 +297,8 @@ class AICompanion {
       document.body.appendChild(container);
       this.vrmAvatar = container;
       
-      // Load Three.js and related libraries
-      console.log('Loading Three.js libraries...');
+      // Load Three.js and VRM libraries
       await this.loadThreeJsLibraries();
-      console.log('Libraries loaded successfully');
       
       // Check if THREE is available
       if (!window.THREE) {
@@ -695,48 +693,14 @@ class AICompanion {
     }
   }
   
-  // Load Three.js and related libraries
+  // Load Three.js and VRM libraries
   async loadThreeJsLibraries() {
-    // Check if Three.js is already loaded
-    if (window.THREE) {
-      console.log('Three.js is already loaded');
-      return;
-    }
-    
-    console.log('Loading Three.js libraries');
-    
     try {
-      // Load Three.js first
-      await this.loadScript(chrome.runtime.getURL('lib/three.min.js'));
-      console.log('Three.js loaded');
+      console.log('Loading Three.js and VRM libraries');
       
-      // Wait to ensure Three.js is initialized
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Verify THREE is available
-      if (!window.THREE) {
-        console.error('THREE is not available after loading three.min.js');
-        throw new Error('THREE is not available after loading');
-      } else {
-        console.log('THREE is available after loading');
-      }
-      
-      // Load GLTFLoader
-      await this.loadScript(chrome.runtime.getURL('lib/GLTFLoader.js'));
-      console.log('GLTFLoader script loaded');
-      
-      // Wait to ensure GLTFLoader is initialized
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      if (!window.THREE.GLTFLoader) {
-        console.error('GLTFLoader is not available after loading');
-      } else {
-        console.log('GLTFLoader is available');
-      }
-      
-      // Load our custom Three-VRM bundle (includes VRM functionality)
-      await this.loadScript(chrome.runtime.getURL('lib/three-vrm-bundle.js'));
-      console.log('Three-VRM bundle loaded');
+      // Load the bundled JavaScript from dist directory
+      await this.loadScript(chrome.runtime.getURL('dist/vrm-bundle.js'));
+      console.log('Three.js and VRM bundle loaded');
       
       // Wait for bundle to be initialized
       await new Promise(resolve => setTimeout(resolve, 300));

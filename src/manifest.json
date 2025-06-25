@@ -56,7 +56,9 @@
         "models/*.vrm",
         "lib/*.js",
         "css/*.css",
-        "js/*.js"
+        "js/*.js",
+        "dist/*.js",
+        "src/models/*.vrm"
       ],
       "matches": ["<all_urls>"]
     }

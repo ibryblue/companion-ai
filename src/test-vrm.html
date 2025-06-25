@@ -47,44 +47,14 @@
   </div>
   <div id="loading">Loading Three.js and VRM libraries...</div>
 
+  <!-- Load the bundled JavaScript from dist directory -->
+  <script src="../dist/vrm-bundle.js"></script>
+  
   <script>
     // Main container
     const container = document.getElementById('container');
     const statusElement = document.getElementById('status');
     const loadingElement = document.getElementById('loading');
-    
-    // Load scripts in sequence
-    async function loadScripts() {
-      try {
-        // Load Three.js
-        await loadScript('lib/three.min.js');
-        updateStatus('Three.js loaded');
-        
-        // Load GLTFLoader
-        await loadScript('lib/GLTFLoader.js');
-        updateStatus('GLTFLoader loaded');
-        
-        // Load Three-VRM
-        await loadScript('lib/three-vrm.min.js');
-        updateStatus('Three-VRM loaded');
-        
-        // Initialize scene when all scripts are loaded
-        initScene();
-      } catch (error) {
-        updateStatus('Error loading scripts: ' + error.message, true);
-      }
-    }
-    
-    // Helper to load scripts
-    function loadScript(src) {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = () => resolve();
-        script.onerror = (e) => reject(new Error(`Failed to load script: ${src}`));
-        document.head.appendChild(script);
-      });
-    }
     
     // Update status message
     function updateStatus(message, isError = false) {
@@ -161,10 +131,6 @@
         loader.register((parser) => {
           return new THREE.VRMLoaderPlugin(parser);
         });
-      } else if (window.VRMLoaderPlugin) {
-        loader.register((parser) => {
-          return new window.VRMLoaderPlugin(parser);
-        });
       } else {
         updateStatus('VRMLoaderPlugin not available, model may not load correctly', true);
       }
@@ -185,15 +151,11 @@
             if (THREE.VRMUtils) {
               THREE.VRMUtils.removeUnnecessaryVertices(gltf.scene);
               THREE.VRMUtils.combineSkeletons(gltf.scene);
-              THREE.VRMUtils.combineMorphs(currentVRM);
               
               // Disable frustum culling
               currentVRM.scene.traverse((obj) => {
                 obj.frustumCulled = false;
               });
-              
-              // Rotate if the VRM is VRM0.0
-              THREE.VRMUtils.rotateVRM0(currentVRM);
             }
             
             scene.add(currentVRM.scene);
@@ -248,8 +210,28 @@
       animate();
     }
     
-    // Start loading scripts
-    loadScripts();
+    // Check if Three.js is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      updateStatus('DOM loaded, checking for Three.js');
+      
+      // Start initialization when the bundle is loaded
+      if (window.THREE) {
+        updateStatus('Three.js is loaded, initializing scene');
+        initScene();
+      } else {
+        updateStatus('Three.js not found, please check the bundle', true);
+      }
+    });
+    
+    // If DOM is already loaded, check immediately
+    if (document.readyState !== 'loading') {
+      if (window.THREE) {
+        updateStatus('Three.js is loaded, initializing scene');
+        initScene();
+      } else {
+        updateStatus('Three.js not found, please check the bundle', true);
+      }
+    }
   </script>
 </body>
 </html> 
