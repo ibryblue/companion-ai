@@ -1,6 +1,6 @@
 # AI Companion Chrome Extension
 
-A real-time AI companion that provides intelligent assistance while browsing the web. This Chrome extension features a floating avatar with contextual responses, scroll event detection, and a modern UI.
+A real-time AI companion that provides intelligent assistance while browsing the web. This Chrome extension features a floating avatar with contextual responses, scroll event detection, and a modern UI. Now with 3D VRM avatar support!
 
 ## 🚀 Features
 
@@ -16,6 +16,14 @@ A real-time AI companion that provides intelligent assistance while browsing the
 - **Customizable Settings**: Adjustable scroll sensitivity, response timing, and behavior
 - **Position Memory**: Avatar remembers its position across page reloads
 - **Privacy-Focused**: All processing happens locally, no external API calls
+
+### 3D VRM Avatar Features
+- **VRM Model Support**: Load and display 3D VRM avatar models
+- **Model Management**: Upload custom VRM models or use sample models
+- **Persistent Storage**: VRM models are saved between sessions
+- **3D Rendering**: WebGL-based rendering with THREE.js
+- **Animation**: Basic avatar animations and interactions
+- **Fallback System**: Graceful degradation when WebGL isn't available
 
 ### Technical Features
 - **Manifest V3 Compliant**: Built with the latest Chrome extension standards
@@ -33,12 +41,18 @@ chrome-extension/
 ├── styles.css             # Avatar and speech bubble styling
 ├── popup.html             # Extension settings interface
 ├── popup.js               # Settings interface functionality
+├── popup-vrm-viewer.js    # VRM model viewer for popup
 ├── popup-styles.css       # Popup interface styling
+├── dist/                  # Compiled JavaScript bundles
+│   └── vrm-bundle.js      # THREE.js and VRM libraries bundle
+├── models/                # Sample VRM models
+│   └── 7062840423830520603.vrm  # Default VRM model
 ├── icons/                 # Extension icons (16px, 32px, 48px, 128px)
 │   ├── icon16.jpg
 │   ├── icon32.jpg
 │   ├── icon48.jpg
 │   └── icon128.jpg
+├── CHANGES.md             # Documentation of recent changes
 └── README.md              # This file
 ```
 
@@ -106,6 +120,29 @@ chrome-extension/
 - **Local Storage**: Settings and position stored locally
 - **No External Calls**: All processing happens on your device
 - **Event History**: Limited storage with automatic cleanup
+
+### VRM Avatar Usage
+
+1. **Enable VRM Avatar**
+   - Open the extension popup
+   - Toggle "Use 3D VRM avatar" to enable the feature
+   - The 2D avatar will be replaced with a 3D VRM model
+
+2. **Use Sample Model**
+   - Select "Sample" from the model dropdown
+   - Click "Load Model" to load the sample VRM model
+   - The sample model will appear on the webpage
+
+3. **Upload Custom VRM Model**
+   - Select "Local" from the model dropdown
+   - Click "Load Model" to open the file picker
+   - Select a valid VRM file from your computer
+   - The custom model will be loaded and saved for future use
+
+4. **Manage VRM Models**
+   - All uploaded models appear in the models dropdown
+   - Select any model from the dropdown to switch avatars
+   - Use the "Clear Models" button to remove all saved models
 
 ## 🔧 Development
 

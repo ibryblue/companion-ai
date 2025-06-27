@@ -7,17 +7,60 @@
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM content loaded, checking for THREE.js');
   
-  // Check if THREE is defined before defining the VRMViewer class
-  if (typeof THREE === 'undefined') {
-    console.error('THREE is not defined. Make sure vrm-bundle.js is loaded correctly.');
-    const errorContainer = document.getElementById('error-container');
-    if (errorContainer) {
-      errorContainer.textContent = 'THREE.js not defined. The bundled script may not have loaded correctly.';
+  // Function to initialize when THREE is available
+  const initWhenThreeIsAvailable = () => {
+    // Check if THREE is defined
+    if (typeof THREE === 'undefined') {
+      console.log('THREE is not defined yet, waiting for bundle to load...');
+      
+      // Set up a listener for the custom event
+      document.addEventListener('vrm-bundle-loaded', () => {
+        console.log('VRM bundle loaded event received, proceeding with initialization');
+        if (typeof THREE !== 'undefined') {
+          console.log('THREE.js is now defined, initializing VRMViewer');
+          // Initialize the viewer if it exists in the window object
+          if (window.popupController && typeof window.popupController.initVRMControls === 'function') {
+            console.log('Calling initVRMControls on popupController');
+            window.popupController.initVRMControls();
+          }
+        } else {
+          console.error('THREE is still not defined after bundle loaded event');
+          const errorContainer = document.getElementById('error-container');
+          if (errorContainer) {
+            errorContainer.textContent = 'THREE.js not defined. The bundled script may not have loaded correctly.';
+          }
+        }
+      });
+      
+      // Also set a timeout as fallback
+      setTimeout(() => {
+        if (typeof THREE !== 'undefined') {
+          console.log('THREE.js is now defined (via timeout), initializing');
+          // Initialize the viewer if it exists in the window object
+          if (window.popupController && typeof window.popupController.initVRMControls === 'function') {
+            console.log('Calling initVRMControls on popupController via timeout');
+            window.popupController.initVRMControls();
+          }
+        } else {
+          console.error('THREE is still not defined after timeout');
+          const errorContainer = document.getElementById('error-container');
+          if (errorContainer) {
+            errorContainer.textContent = 'THREE.js not defined. The bundled script may not have loaded correctly.';
+          }
+        }
+      }, 1000);
+    } else {
+      console.log('THREE.js is defined, proceeding with VRMViewer initialization');
+      // Initialize the viewer if it exists in the window object
+      if (window.popupController && typeof window.popupController.initVRMControls === 'function') {
+        console.log('Calling initVRMControls on popupController immediately');
+        window.popupController.initVRMControls();
+      }
     }
-    return;
-  }
+  };
   
-  console.log('THREE.js is defined, proceeding with VRMViewer initialization');
+  // Check immediately and set up waiting if needed
+  initWhenThreeIsAvailable();
 });
 
 class VRMViewer {
@@ -33,6 +76,7 @@ class VRMViewer {
     this.isInitialized = false;
     this.statusCallback = null;
     this.errorCallback = null;
+    this.animationHandler = null; // Animation handler instance
     
     // Don't auto-initialize, wait for explicit init call
   }
@@ -119,9 +163,20 @@ class VRMViewer {
       
       // Add camera controls
       try {
-        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.target.set(0, 1, 0);
-        this.controls.update();
+        // Check for OrbitControls in different possible locations
+        const OrbitControlsClass = THREE.OrbitControls || 
+                                  (THREE.examples && THREE.examples.jsm && THREE.examples.jsm.controls && THREE.examples.jsm.controls.OrbitControls) || 
+                                  window.OrbitControls;
+        
+        if (OrbitControlsClass) {
+          this.controls = new OrbitControlsClass(this.camera, this.renderer.domElement);
+          this.controls.target.set(0, 1, 0);
+          this.controls.update();
+          console.log('OrbitControls initialized successfully');
+        } else {
+          console.warn('OrbitControls not found, continuing without camera controls');
+          // Continue without controls
+        }
       } catch (controlsError) {
         const error = `Failed to create OrbitControls: ${controlsError.message}`;
         console.error(error);
@@ -184,6 +239,11 @@ class VRMViewer {
       this.currentVRM.update(delta);
     }
     
+    // Update animation mixer if available
+    if (this.animationHandler) {
+      this.animationHandler.update(delta);
+    }
+    
     // Rotate model if enabled
     if (this.isRotating && this.currentVRM && this.currentVRM.scene) {
       this.currentVRM.scene.rotation.y += 0.01;
@@ -224,113 +284,137 @@ class VRMViewer {
    * @param {string} url - URL of the VRM model
    * @param {Function} successCallback - Function to call on successful load
    * @param {Function} errorCallback - Function to call on error
+   * @returns {Promise} - Promise that resolves with the VRM model or rejects with an error
    */
   loadVRMFromURL(url, successCallback = null, errorCallback = null) {
-    if (!this.isInitialized) {
-      const error = new Error('VRM viewer not initialized');
-      this.callStatusCallback('VRM viewer not initialized', 'error');
-      if (errorCallback) errorCallback(error.message);
-      return;
-    }
-    
-    // Clear existing model
-    if (this.currentVRM && this.currentVRM.scene) {
-      this.scene.remove(this.currentVRM.scene);
-      this.currentVRM = null;
-    }
-    
-    console.log('Loading VRM model from URL:', url);
-    this.callStatusCallback('Loading VRM model...', 'info');
-    
-    try {
-      // For extension local files, ensure we have the right URL format
-      if (url.includes('chrome-extension://') || url.startsWith('src/')) {
-        console.log('Loading extension resource:', url);
-      }
-      
-      // Create loader
-      const loader = new THREE.GLTFLoader();
-      loader.crossOrigin = 'anonymous';
-      
-      // Check for VRM loader plugin
-      if (typeof VRMLoaderPlugin === 'undefined') {
-        const error = new Error('VRMLoaderPlugin not found in the bundle');
-        this.callStatusCallback('VRMLoaderPlugin not available', 'error');
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        const error = new Error('VRM viewer not initialized');
+        this.callStatusCallback('VRM viewer not initialized', 'error');
         if (errorCallback) errorCallback(error.message);
+        reject(error);
         return;
       }
       
-      // Register VRM loader plugin
-      loader.register((parser) => {
-        return new VRMLoaderPlugin(parser);
-      });
+      // Clear existing model
+      if (this.currentVRM && this.currentVRM.scene) {
+        this.scene.remove(this.currentVRM.scene);
+        this.currentVRM = null;
+      }
       
-      // Add error handler for the loader
-      loader.manager.onError = (urlError) => {
-        console.error('Error loading resource:', urlError);
-        this.callStatusCallback('Failed to load resource: ' + urlError, 'error');
-        if (errorCallback) errorCallback(`Error loading resource: ${urlError}`);
-      };
+      // Clean up any existing animation handler
+      if (this.animationHandler) {
+        this.animationHandler.dispose();
+        this.animationHandler = null;
+      }
       
-      // Load the model
-      loader.load(
-        url,
-        (gltf) => {
-          this.callStatusCallback('Model loaded, processing...', 'info');
-          
-          try {
-            // Handle VRM data
-            if (gltf.userData && gltf.userData.vrm) {
-              this.currentVRM = gltf.userData.vrm;
-              this.scene.add(this.currentVRM.scene);
-              
-              // Apply VRM optimizations if available
-              if (typeof VRMUtils !== 'undefined') {
-                VRMUtils.removeUnnecessaryJoints(this.currentVRM.scene);
-                
-                // Disable frustum culling to avoid disappearing models
-                this.currentVRM.scene.traverse((obj) => {
-                  obj.frustumCulled = false;
-                });
-              }
-              
-              this.callStatusCallback('VRM model loaded successfully', 'success');
-              if (successCallback) successCallback(this.currentVRM);
-            } else {
-              // Fallback to just using the GLTF scene
-              this.callStatusCallback('No VRM data found, using raw GLTF scene', 'warning');
-              
-              this.currentVRM = {
-                scene: gltf.scene,
-                update: null
-              };
-              this.scene.add(gltf.scene);
-              
-              if (successCallback) successCallback(this.currentVRM);
-            }
-          } catch (error) {
-            console.error('Error processing VRM model:', error);
-            this.callStatusCallback('Error processing VRM model', 'error');
-            if (errorCallback) errorCallback(error.message);
-          }
-        },
-        (progress) => {
-          if (progress.total > 0) {
-            const percent = Math.round(progress.loaded / progress.total * 100);
-            this.callStatusCallback(`Loading model: ${percent}%`, 'info');
-          }
-        },
-        (error) => {
-          console.error('Error loading VRM model:', error);
-          this.callStatusCallback('Failed to load VRM model', 'error');
-          if (errorCallback) errorCallback(error.message);
+      console.log('Loading VRM model from URL:', url);
+      this.callStatusCallback('Loading VRM model...', 'info');
+      
+      try {
+        // For extension local files, ensure we have the right URL format
+        if (url.includes('chrome-extension://') || url.startsWith('src/')) {
+          console.log('Loading extension resource:', url);
         }
-      );
-    } catch (error) {
-      console.error('Error in loadVRMFromURL:', error);
-      this.callStatusCallback('Error loading VRM model', 'error');
-      if (errorCallback) errorCallback(error.message);
-    }
+        
+        // Create loader
+        const loader = new THREE.GLTFLoader();
+        loader.crossOrigin = 'anonymous';
+        
+        // Check for VRM loader plugin
+        if (typeof VRMLoaderPlugin === 'undefined') {
+          const error = new Error('VRMLoaderPlugin not found in the bundle');
+          this.callStatusCallback('VRMLoaderPlugin not available', 'error');
+          if (errorCallback) errorCallback(error.message);
+          reject(error);
+          return;
+        }
+        
+        // Register VRM loader plugin
+        loader.register((parser) => {
+          return new VRMLoaderPlugin(parser);
+        });
+        
+        // Add error handler for the loader
+        loader.manager.onError = (urlError) => {
+          console.error('Error loading resource:', urlError);
+          this.callStatusCallback('Failed to load resource: ' + urlError, 'error');
+          if (errorCallback) errorCallback(`Error loading resource: ${urlError}`);
+          reject(new Error(`Error loading resource: ${urlError}`));
+        };
+        
+        // Load the model
+        loader.load(
+          url,
+          (gltf) => {
+            this.callStatusCallback('Model loaded, processing...', 'info');
+            
+            try {
+              // Handle VRM data
+              if (gltf.userData && gltf.userData.vrm) {
+                this.currentVRM = gltf.userData.vrm;
+                this.scene.add(this.currentVRM.scene);
+                
+                // Apply VRM optimizations if available
+                if (typeof VRMUtils !== 'undefined') {
+                  VRMUtils.removeUnnecessaryJoints(this.currentVRM.scene);
+                  
+                  // Disable frustum culling to avoid disappearing models
+                  this.currentVRM.scene.traverse((obj) => {
+                    obj.frustumCulled = false;
+                  });
+                }
+                
+                this.callStatusCallback('VRM model loaded successfully', 'success');
+                
+                // Initialize animation handler with fallback animation
+                this.initAnimationHandler();
+                
+                if (successCallback) successCallback(this.currentVRM);
+                resolve(this.currentVRM);
+              } else {
+                // Fallback to just using the GLTF scene
+                this.callStatusCallback('No VRM data found, using raw GLTF scene', 'warning');
+                
+                this.currentVRM = {
+                  scene: gltf.scene,
+                  update: null
+                };
+                this.scene.add(gltf.scene);
+                
+                // Initialize animation handler with fallback animation
+                this.initAnimationHandler();
+                
+                if (successCallback) successCallback(this.currentVRM);
+                resolve(this.currentVRM);
+              }
+            } catch (error) {
+              console.error('Error processing VRM model:', error);
+              this.callStatusCallback('Error processing VRM model', 'error');
+              if (errorCallback) errorCallback(error.message);
+              reject(error);
+            }
+          },
+          (progress) => {
+            if (progress.total > 0) {
+              const percent = Math.round(progress.loaded / progress.total * 100);
+              this.callStatusCallback(`Loading model: ${percent}%`, 'info');
+            }
+          },
+          (error) => {
+            console.error('Error loading VRM model:', error);
+            this.callStatusCallback('Failed to load VRM model', 'error');
+            if (errorCallback) errorCallback(error.message);
+            reject(error);
+          }
+        );
+      } catch (error) {
+        console.error('Error in loadVRMFromURL:', error);
+        this.callStatusCallback('Error loading VRM model', 'error');
+        if (errorCallback) errorCallback(error.message);
+        reject(error);
+      }
+    });
   }
   
   /**
@@ -361,6 +445,12 @@ class VRMViewer {
     if (this.currentVRM && this.currentVRM.scene) {
       this.scene.remove(this.currentVRM.scene);
       this.currentVRM = null;
+    }
+    
+    // Clean up any existing animation handler
+    if (this.animationHandler) {
+      this.animationHandler.dispose();
+      this.animationHandler = null;
     }
 
     try {
@@ -409,6 +499,10 @@ class VRMViewer {
                   }
                   
                   this.callStatusCallback('VRM model loaded successfully', 'success');
+                  
+                  // Initialize animation handler with fallback animation
+                  this.initAnimationHandler();
+                  
                   if (successCallback) successCallback(this.currentVRM);
                 } else {
                   // Fallback to just using the GLTF scene
@@ -419,6 +513,9 @@ class VRMViewer {
                     update: null
                   };
                   this.scene.add(gltf.scene);
+                  
+                  // Initialize animation handler with fallback animation
+                  this.initAnimationHandler();
                   
                   if (successCallback) successCallback(this.currentVRM);
                 }
@@ -509,6 +606,12 @@ class VRMViewer {
   dispose() {
     window.removeEventListener('resize', this.onResize.bind(this));
     
+    // Clean up animation handler
+    if (this.animationHandler) {
+      this.animationHandler.dispose();
+      this.animationHandler = null;
+    }
+    
     if (this.currentVRM && this.currentVRM.scene) {
       this.scene.remove(this.currentVRM.scene);
       this.currentVRM = null;
@@ -527,5 +630,130 @@ class VRMViewer {
     this.controls = null;
     this.clock = null;
     this.isInitialized = false;
+  }
+
+  /**
+   * Initialize the animation handler after a VRM model has been loaded
+   * @returns {VRMAnimationHandler|null} - The animation handler instance or null if initialization failed
+   */
+  initAnimationHandler() {
+    if (!this.currentVRM || !this.currentVRM.scene) {
+      this.callStatusCallback('No VRM model loaded, cannot initialize animation handler', 'error');
+      return null;
+    }
+    
+    try {
+      // Check if VRMAnimationHandler is available
+      if (typeof VRMAnimationHandler === 'undefined') {
+        console.warn('VRMAnimationHandler not found, animations will not be available');
+        return null;
+      }
+      
+      // Clean up any existing animation handler
+      if (this.animationHandler) {
+        this.animationHandler.dispose();
+        this.animationHandler = null;
+      }
+      
+      // Create a new animation handler
+      console.log('Creating new VRMAnimationHandler');
+      this.animationHandler = new VRMAnimationHandler(this, this.statusCallback, this.errorCallback);
+      
+      // Log the VRM model and scene for debugging
+      console.log('VRM model for animation:', this.currentVRM);
+      console.log('VRM scene for animation:', this.currentVRM.scene);
+      
+      // Initialize the mixer
+      const mixerInitialized = this.animationHandler.initMixer();
+      if (!mixerInitialized) {
+        console.error('Failed to initialize animation mixer');
+        return null;
+      }
+      
+      // Create and set a fallback idle animation
+      console.log('Creating fallback animation');
+      const idleAnimation = this.animationHandler.createIdleAnimation();
+      if (idleAnimation) {
+        console.log('Fallback animation created:', idleAnimation);
+        this.animationHandler.setFallbackAnimation(idleAnimation);
+        
+        // Play the fallback animation by default
+        console.log('Playing fallback animation');
+        const playResult = this.animationHandler.playAnimation(idleAnimation);
+        if (playResult) {
+          console.log('Fallback animation playing');
+        } else {
+          console.warn('Failed to play fallback animation');
+          
+          // Try a simple test animation as a last resort
+          console.log('Trying test animation');
+          const testAnimation = this.animationHandler.createSimpleTestAnimation();
+          if (testAnimation) {
+            this.animationHandler.playAnimation(testAnimation);
+          }
+        }
+      } else {
+        console.warn('Failed to create idle animation');
+        
+        // Try a simple test animation as a last resort
+        console.log('Trying test animation');
+        const testAnimation = this.animationHandler.createSimpleTestAnimation();
+        if (testAnimation) {
+          this.animationHandler.playAnimation(testAnimation);
+        }
+      }
+      
+      return this.animationHandler;
+    } catch (error) {
+      console.error('Error initializing animation handler:', error);
+      this.callStatusCallback('Failed to initialize animation handler', 'error');
+      return null;
+    }
+  }
+  
+  /**
+   * Load an animation from URL and apply it to the current VRM model
+   * @param {string} url - URL of the animation file
+   * @returns {Promise} - Promise that resolves with the loaded animation or rejects with an error
+   */
+  loadAnimation(url) {
+    if (!this.currentVRM || !this.currentVRM.scene) {
+      return Promise.reject(new Error('No VRM model loaded'));
+    }
+    
+    // Initialize animation handler if not already done
+    if (!this.animationHandler) {
+      this.initAnimationHandler();
+      
+      if (!this.animationHandler) {
+        return Promise.reject(new Error('Failed to initialize animation handler'));
+      }
+    }
+    
+    // Load and apply the animation
+    return this.animationHandler.loadAnimationFromURL(url);
+  }
+  
+  /**
+   * Load an animation from a file and apply it to the current VRM model
+   * @param {File} file - File object containing the animation
+   * @returns {Promise} - Promise that resolves with the loaded animation or rejects with an error
+   */
+  loadAnimationFromFile(file) {
+    if (!this.currentVRM || !this.currentVRM.scene) {
+      return Promise.reject(new Error('No VRM model loaded'));
+    }
+    
+    // Initialize animation handler if not already done
+    if (!this.animationHandler) {
+      this.initAnimationHandler();
+      
+      if (!this.animationHandler) {
+        return Promise.reject(new Error('Failed to initialize animation handler'));
+      }
+    }
+    
+    // Load and apply the animation
+    return this.animationHandler.loadAnimationFromFile(file);
   }
 } 

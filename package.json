@@ -14,7 +14,10 @@
   "dependencies": {
     "three": "0.151.3",
     "@pixiv/three-vrm": "^1.0.9",
+    "@pixiv/three-vrm-animation": "^3.3.7",
     "@pixiv/three-vrm-core": "^1.0.9",
+    "@pixiv/types-vrmc-vrm-1.0": "^3.3.7",
+    "@pixiv/types-vrmc-vrm-animation-1.0": "^3.3.7",
     "@pixiv/three-vrm-materials-mtoon": "^1.0.9",
     "@pixiv/three-vrm-materials-hdr-emissive-multiplier": "^1.0.9",
     "@pixiv/three-vrm-materials-v0compat": "^1.0.9",
@@ -23,6 +26,8 @@
   },
   "devDependencies": {
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "@types/three": "^0.151.0",
+    "lint-staged": "^13.2.2"
   }
 } 

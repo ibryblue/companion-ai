@@ -112,27 +112,39 @@ class PopupController {
   
   initEventListeners() {
     // Toggle event listeners
-    document.getElementById('companion-toggle').addEventListener('change', (e) => {
-      this.settings.enabled = e.target.checked;
-      this.saveSettings();
-      this.updateUI();
-    });
+    const companionToggle = document.getElementById('companion-toggle');
+    if (companionToggle) {
+      companionToggle.addEventListener('change', (e) => {
+        this.settings.enabled = e.target.checked;
+        this.saveSettings();
+        this.updateUI();
+      });
+    }
     
-    document.getElementById('mute-toggle').addEventListener('change', (e) => {
-      this.settings.muted = e.target.checked;
-      this.saveSettings();
-    });
+    const muteToggle = document.getElementById('mute-toggle');
+    if (muteToggle) {
+      muteToggle.addEventListener('change', (e) => {
+        this.settings.muted = e.target.checked;
+        this.saveSettings();
+      });
+    }
     
-    document.getElementById('ai-toggle').addEventListener('change', (e) => {
-      this.settings.useAI = e.target.checked;
-      this.saveSettings();
-    });
+    const aiToggle = document.getElementById('ai-toggle');
+    if (aiToggle) {
+      aiToggle.addEventListener('change', (e) => {
+        this.settings.useAI = e.target.checked;
+        this.saveSettings();
+      });
+    }
     
-    document.getElementById('vrm-toggle').addEventListener('change', (e) => {
-      this.settings.useVRM = e.target.checked;
-      this.saveSettings();
-      this.updateVRMControls();
-    });
+    const vrmToggle = document.getElementById('vrm-toggle');
+    if (vrmToggle) {
+      vrmToggle.addEventListener('change', (e) => {
+        this.settings.useVRM = e.target.checked;
+        this.saveSettings();
+        this.updateVRMControls();
+      });
+    }
     
     // Character selection
     document.querySelectorAll('.character-option').forEach(option => {
@@ -145,20 +157,29 @@ class PopupController {
     });
     
     // Response settings
-    document.getElementById('response-frequency').addEventListener('change', (e) => {
-      this.settings.responseFrequency = parseInt(e.target.value);
-      this.saveSettings();
-    });
+    const responseFrequency = document.getElementById('response-frequency');
+    if (responseFrequency) {
+      responseFrequency.addEventListener('change', (e) => {
+        this.settings.responseFrequency = parseInt(e.target.value);
+        this.saveSettings();
+      });
+    }
     
-    document.getElementById('response-duration').addEventListener('change', (e) => {
-      this.settings.responseDuration = parseInt(e.target.value);
-      this.saveSettings();
-    });
+    const responseDuration = document.getElementById('response-duration');
+    if (responseDuration) {
+      responseDuration.addEventListener('change', (e) => {
+        this.settings.responseDuration = parseInt(e.target.value);
+        this.saveSettings();
+      });
+    }
     
     // Reset button
-    document.getElementById('reset-btn').addEventListener('click', () => {
-      this.resetSettings();
-    });
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.resetSettings();
+      });
+    }
     
     // Initialize VRM upload functionality
     this.handleVRMUpload();
@@ -193,33 +214,67 @@ class PopupController {
     }
     
     // VRM model selection
-    document.getElementById('vrm-models').addEventListener('change', (e) => {
-      this.settings.selectedVrmModel = e.target.value;
-      this.saveSettings();
-      
-      // Notify content script to update the VRM model
-      chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-        if (tabs[0]) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            action: 'updateVRMModel',
-            modelName: e.target.value
-          }, (response) => {
-            const error = chrome.runtime.lastError;
-            if (error) {
-              console.log('Error sending updateVRMModel message:', error);
-            } else {
-              console.log('VRM model update message sent, response:', response);
-            }
-          });
-        }
+    const vrmModelsSelect = document.getElementById('vrm-models');
+    if (vrmModelsSelect) {
+      vrmModelsSelect.addEventListener('change', (e) => {
+        this.settings.selectedVrmModel = e.target.value;
+        this.saveSettings();
+        
+        // Notify content script to update the VRM model
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: 'updateVRMModel',
+              modelName: e.target.value
+            }, (response) => {
+              const error = chrome.runtime.lastError;
+              if (error) {
+                console.log('Error sending updateVRMModel message:', error);
+              } else {
+                console.log('VRM model update message sent, response:', response);
+              }
+            });
+          }
+        });
       });
-    });
+    }
     
     // Clear VRM models button
     const clearVrmBtn = document.getElementById('clear-vrm-btn');
     if (clearVrmBtn) {
       clearVrmBtn.addEventListener('click', () => {
         this.clearVRMModels();
+      });
+    }
+
+    // Load Model button
+    const loadModelBtn = document.getElementById('load-model');
+    if (loadModelBtn) {
+      loadModelBtn.addEventListener('click', () => {
+        // Get the selected model type
+        const modelSelect = document.getElementById('model-select');
+        if (!modelSelect) return;
+        
+        const selectedValue = modelSelect.value;
+        console.log('Selected model type:', selectedValue);
+        
+        // Handle based on selection
+        if (selectedValue === 'sample') {
+          // Load sample model
+          this.useSampleVRMModel();
+        } else if (selectedValue === 'local') {
+          // Trigger file upload for local model
+          const fileInput = document.getElementById('vrm-file-input');
+          if (fileInput) {
+            fileInput.click();
+          } else {
+            console.error('File input element not found');
+            const statusElement = document.getElementById('status-container');
+            if (statusElement) {
+              statusElement.textContent = 'Error: File input not found';
+            }
+          }
+        }
       });
     }
   }
@@ -306,12 +361,16 @@ class PopupController {
   
   updateVRMModelsList() {
     const selectElement = document.getElementById('vrm-models');
-    if (!selectElement) return;
+    if (!selectElement) {
+      console.warn('VRM models select element not found');
+      return;
+    }
     
     // Clear existing options
     selectElement.innerHTML = '';
     
     if (this.vrmModels && this.vrmModels.length > 0) {
+      // Add each model to the dropdown
       this.vrmModels.forEach(model => {
         const option = document.createElement('option');
         option.value = model.name;
@@ -321,7 +380,18 @@ class PopupController {
       
       // Set the selected model if it exists
       if (this.settings.selectedVrmModel) {
-        selectElement.value = this.settings.selectedVrmModel;
+        // Check if the selected model exists in the list
+        const modelExists = this.vrmModels.some(model => model.name === this.settings.selectedVrmModel);
+        if (modelExists) {
+          selectElement.value = this.settings.selectedVrmModel;
+        } else {
+          console.warn('Selected model not found in list:', this.settings.selectedVrmModel);
+          // If the selected model doesn't exist, select the first one
+          if (this.vrmModels.length > 0) {
+            this.settings.selectedVrmModel = this.vrmModels[0].name;
+            this.saveSettings();
+          }
+        }
       }
     } else {
       // Add a placeholder option if no models are available
@@ -333,8 +403,23 @@ class PopupController {
       selectElement.appendChild(option);
     }
     
+    // Also update the model-select dropdown if it exists
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+      // If we have a selected model, set the appropriate option
+      if (this.settings.selectedVrmModel === 'Sample VRM') {
+        modelSelect.value = 'sample';
+      } else if (this.settings.selectedVrmModel) {
+        modelSelect.value = 'local';
+      }
+    }
+    
+    // Remove any existing event listeners to prevent duplicates
+    const newSelect = selectElement.cloneNode(true);
+    selectElement.parentNode.replaceChild(newSelect, selectElement);
+    
     // Add event listener for selection change
-    selectElement.addEventListener('change', (e) => {
+    newSelect.addEventListener('change', (e) => {
       const selectedModelName = e.target.value;
       this.settings.selectedVrmModel = selectedModelName;
       this.saveSettings();
@@ -352,15 +437,17 @@ class PopupController {
       // Notify content script to update the VRM model
       this.sendMessageToTab({
         action: 'updateVRMModel',
-        modelName: selectedModelName
+        modelName: selectedModelName,
+        modelData: this.vrmModels.find(model => model.name === selectedModelName)
       });
     });
   }
   
   handleVRMUpload() {
     const fileInput = document.getElementById('vrm-file-input');
-    const uploadBtn = document.getElementById('upload-vrm-btn');
-    const statusElement = document.getElementById('upload-status');
+    const uploadBtn = document.getElementById('upload-vrm');
+    const statusContainer = document.getElementById('status-container');
+    const errorContainer = document.getElementById('error-container');
     
     if (fileInput && uploadBtn) {
       uploadBtn.addEventListener('click', () => {
@@ -374,89 +461,76 @@ class PopupController {
         }
         
         if (!file.name.toLowerCase().endsWith('.vrm')) {
-          this.showError('Please select a valid VRM file');
+          if (errorContainer) errorContainer.textContent = 'Please select a valid VRM file';
+          if (statusContainer) statusContainer.textContent = 'Invalid file format';
           return;
         }
         
         try {
-          if (statusElement) {
-            statusElement.textContent = 'Processing VRM file...';
-            statusElement.style.color = 'var(--text-secondary)';
+          if (statusContainer) {
+            statusContainer.textContent = 'Processing VRM file...';
+          }
+          if (errorContainer) {
+            errorContainer.textContent = '';
           }
           
           console.log('Processing VRM file:', file.name);
           
-          // Create a URL for the file
-          const objectUrl = URL.createObjectURL(file);
-          
-          // Try to load the model in the viewer first to validate it
-          if (this.vrmViewer) {
-            try {
-              await this.vrmViewer.loadVRMFromFile(file);
-              console.log('VRM preview loaded successfully');
-            } catch (error) {
-              console.error('Failed to load VRM preview:', error);
-              this.showError('Failed to load VRM model preview');
-              URL.revokeObjectURL(objectUrl);
-              return;
+          // Make sure the VRM viewer is initialized
+          if (!this.vrmViewer || !this.vrmViewer.isInitialized) {
+            console.log('VRM viewer not initialized, initializing now');
+            const vrmPreviewContainer = document.getElementById('vrm-preview-container');
+            if (vrmPreviewContainer) {
+              this.initVRMControls();
             }
           }
           
-          // Existing code for storing the model
-          const modelName = file.name.replace(/\.vrm$/i, '');
-          
-          // Check if a model with this name already exists
-          const existingModelIndex = this.vrmModels.findIndex(model => model.name === modelName);
-          if (existingModelIndex !== -1) {
-            // Update existing model
-            this.vrmModels[existingModelIndex] = {
-              name: modelName,
-              url: objectUrl,
-              source: 'user',
-              dateAdded: new Date().toISOString()
-            };
+          // Try to load the model in the viewer
+          if (this.vrmViewer && this.vrmViewer.isInitialized) {
+            try {
+              console.log('Loading VRM file into viewer');
+              
+              // Use loadVRMFromFile to load directly from the File object
+              await this.vrmViewer.loadVRMFromFile(file, 
+                // Success callback
+                (vrm) => {
+                  console.log('VRM preview loaded successfully');
+                  
+                  // Save the model
+                  const modelName = file.name.replace(/\.vrm$/i, '');
+                  
+                  // Create a URL for the file
+                  const objectUrl = URL.createObjectURL(file);
+                  
+                  // Handle successful load
+                  this.handleSuccessfulVRMLoad(modelName, vrm, objectUrl, 'user', statusContainer);
+                },
+                // Error callback
+                (error) => {
+                  console.error('Failed to load VRM preview:', error);
+                  if (errorContainer) errorContainer.textContent = 'Failed to load VRM model: ' + error;
+                  if (statusContainer) statusContainer.textContent = 'Error loading model';
+                }
+              );
+            } catch (error) {
+              console.error('Error in loadVRMFromFile:', error);
+              if (errorContainer) errorContainer.textContent = 'Error processing file: ' + error.message;
+              if (statusContainer) statusContainer.textContent = 'Failed to process file';
+            }
           } else {
-            // Add new model
-            this.vrmModels.push({
-              name: modelName,
-              url: objectUrl,
-              source: 'user',
-              dateAdded: new Date().toISOString()
-            });
+            console.error('VRM viewer not available');
+            if (errorContainer) errorContainer.textContent = 'VRM viewer not available';
+            if (statusContainer) statusContainer.textContent = 'Cannot load model';
           }
-          
-          // Update settings with the new model list
-          this.settings.vrmModels = this.vrmModels;
-          this.settings.selectedVrmModel = modelName;
-          
-          // Save to storage
-          this.saveVRMModels();
-          
-          // Update the UI
-          this.updateVRMModelsList();
-          
-          if (statusElement) {
-            statusElement.textContent = 'VRM model uploaded successfully!';
-            statusElement.style.color = 'var(--success-color, #4CAF50)';
-          }
-          
-          // Notify content script to update the VRM model
-          this.sendMessageToTab({
-            action: 'updateVRMModel',
-            modelName: modelName
-          });
           
           // Reset the file input
           fileInput.value = '';
           
-          console.log('VRM model added:', modelName);
         } catch (error) {
           console.error('Failed to process VRM file:', error);
           
-          if (statusElement) {
-            statusElement.textContent = 'Failed to process VRM file';
-            statusElement.style.color = 'var(--error-color, #f44336)';
-          }
+          if (errorContainer) errorContainer.textContent = 'Error: ' + error.message;
+          if (statusContainer) statusContainer.textContent = 'Failed to process VRM file';
           
           // Reset the file input
           fileInput.value = '';
@@ -507,135 +581,179 @@ class PopupController {
     if (!this.vrmInitialized) {
       console.log('Initializing VRM controls');
       
+      // Check if the container exists
+      const vrmPreviewContainer = document.getElementById('vrm-preview-container');
+      if (!vrmPreviewContainer) {
+        console.error('VRM preview container not found');
+        return;
+      }
+      
       // Check if THREE is defined
       if (typeof THREE === 'undefined') {
         console.error('THREE is not defined. Make sure vrm-bundle.js is loaded correctly.');
-        document.getElementById('error-container').textContent = 'THREE.js not defined. The bundled script may not have loaded correctly.';
-        document.getElementById('status-container').textContent = 'Failed to initialize viewer';
+        const errorContainer = document.getElementById('error-container');
+        if (errorContainer) errorContainer.textContent = 'THREE.js not defined. The bundled script may not have loaded correctly.';
+        const statusContainer = document.getElementById('status-container');
+        if (statusContainer) statusContainer.textContent = 'Failed to initialize viewer';
         return;
       }
       
-      // Initialize VRM viewer with proper error handling
-      this.vrmViewer = new VRMViewer('vrm-preview-container');
-      
-      // Initialize the viewer with status and error callbacks
-      const initSuccess = this.vrmViewer.init(
-        // Status callback
-        (status) => {
-          console.log('VRM status:', status);
-          const statusContainer = document.getElementById('status-container');
-          if (statusContainer) statusContainer.textContent = status;
-        },
-        // Error callback
-        (error) => {
-          console.error('VRM error:', error);
-          const errorContainer = document.getElementById('error-container');
-          if (errorContainer) errorContainer.textContent = error;
-        }
-      );
-      
-      if (!initSuccess) {
-        console.error('Failed to initialize VRM viewer');
-        return;
-      }
-
-      // Handle model selection and loading
-      const modelSelect = document.getElementById('model-select');
-      const loadModelBtn = document.getElementById('load-model');
-      
-      if (modelSelect) {
-        modelSelect.addEventListener('change', (e) => {
-          if (e.target.value === 'sample') {
-            const uploadBtn = document.getElementById('upload-vrm');
-            if (uploadBtn) uploadBtn.disabled = true;
-          } else {
-            const uploadBtn = document.getElementById('upload-vrm');
-            if (uploadBtn) uploadBtn.disabled = false;
-          }
-        });
-      }
-
-      if (loadModelBtn) {
-        loadModelBtn.addEventListener('click', () => {
-          const selected = modelSelect ? modelSelect.value : 'sample';
-          if (selected === 'sample') {
-            this.loadSampleModelWithFallbacks();
-          } else {
-            const fileInput = document.getElementById('vrm-file-input');
-            if (fileInput) fileInput.click();
-          }
-        });
-      }
-
-      // Handle file upload
-      const fileInput = document.getElementById('vrm-file-input');
-      if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-          const file = e.target.files[0];
-          if (file) {
+      try {
+        // Initialize VRM viewer with proper error handling
+        this.vrmViewer = new VRMViewer('vrm-preview-container');
+        
+        // Initialize the viewer with status and error callbacks
+        const initSuccess = this.vrmViewer.init(
+          // Status callback
+          (status) => {
+            console.log('VRM status:', status);
             const statusContainer = document.getElementById('status-container');
+            if (statusContainer) statusContainer.textContent = status;
+          },
+          // Error callback
+          (error) => {
+            console.error('VRM error:', error);
             const errorContainer = document.getElementById('error-container');
+            if (errorContainer) errorContainer.textContent = error;
+          }
+        );
+        
+        if (!initSuccess) {
+          console.error('Failed to initialize VRM viewer');
+          return;
+        }
+        
+        this.vrmInitialized = true;
+
+        // Initialize animation controls
+        try {
+          // Check if VRMAnimationControls is available
+          if (typeof VRMAnimationControls !== 'undefined') {
+            console.log('Initializing VRM animation controls');
             
-            if (statusContainer) statusContainer.textContent = `Loading model: ${file.name}`;
-            if (errorContainer) errorContainer.textContent = '';
+            // Find or create container for animation controls
+            let animControlsContainer = document.getElementById('vrm-animation-controls-container');
+            if (!animControlsContainer) {
+              animControlsContainer = document.createElement('div');
+              animControlsContainer.id = 'vrm-animation-controls-container';
+              
+              // Find a good place to insert the controls
+              const vrmControls = document.getElementById('vrm-controls');
+              if (vrmControls) {
+                vrmControls.appendChild(animControlsContainer);
+              } else {
+                // Fallback: append to the preview container
+                vrmPreviewContainer.parentNode.insertBefore(
+                  animControlsContainer, 
+                  vrmPreviewContainer.nextSibling
+                );
+              }
+            }
             
-            this.vrmViewer.loadVRMFromFile(file, 
-              // Success callback
-              (model) => this.handleSuccessfulVRMLoad(file.name, model),
-              // Error callback
-              (error) => {
-                console.error('Error loading VRM file:', error);
-                if (errorContainer) errorContainer.textContent = `Error: ${error}`;
-                if (statusContainer) statusContainer.textContent = 'Failed to load model';
-              });
+            // Initialize the animation controls
+            this.animationControls = new VRMAnimationControls(
+              animControlsContainer,
+              this.vrmViewer
+            );
+            
+            // Add a test animation button
+            const testAnimationButton = document.createElement('button');
+            testAnimationButton.textContent = 'Test Animation';
+            testAnimationButton.className = 'secondary-button';
+            testAnimationButton.style.marginTop = '10px';
+            testAnimationButton.style.width = '100%';
+            
+            testAnimationButton.addEventListener('click', () => {
+              if (!this.vrmViewer || !this.vrmViewer.currentVRM) {
+                const statusContainer = document.getElementById('status-container');
+                if (statusContainer) statusContainer.textContent = 'Please load a VRM model first';
+                return;
+              }
+              
+              // Make sure animation handler is initialized
+              if (!this.vrmViewer.animationHandler) {
+                this.vrmViewer.initAnimationHandler();
+              }
+              
+              if (this.vrmViewer.animationHandler) {
+                // Create and play a test animation
+                const testAnimation = this.vrmViewer.animationHandler.createSimpleTestAnimation();
+                if (testAnimation) {
+                  this.vrmViewer.animationHandler.playAnimation(testAnimation);
+                  
+                  const statusContainer = document.getElementById('status-container');
+                  if (statusContainer) statusContainer.textContent = 'Test animation created and playing';
+                  
+                  // Update animation controls UI
+                  if (this.animationControls) {
+                    this.animationControls.updateUI();
+                  }
+                }
+              }
+            });
+            
+            // Add the button to the controls container
+            animControlsContainer.appendChild(testAnimationButton);
+            
+            console.log('VRM animation controls initialized');
+          } else {
+            console.warn('VRMAnimationControls not available, skipping animation controls initialization');
           }
-        });
+        } catch (animError) {
+          console.error('Error initializing animation controls:', animError);
+        }
+
+        // Handle model selection and loading - with null checks
+        const modelSelect = document.getElementById('model-select');
+        const loadModelBtn = document.getElementById('load-model');
+        
+        if (modelSelect) {
+          modelSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'sample') {
+              const uploadBtn = document.getElementById('upload-vrm');
+              if (uploadBtn) uploadBtn.disabled = true;
+            } else {
+              const uploadBtn = document.getElementById('upload-vrm');
+              if (uploadBtn) uploadBtn.disabled = false;
+            }
+          });
+        }
+
+        if (loadModelBtn) {
+          loadModelBtn.addEventListener('click', () => {
+            // Get the selected model type
+            const modelSelect = document.getElementById('model-select');
+            if (!modelSelect) return;
+            
+            const selectedValue = modelSelect.value;
+            console.log('Selected model type:', selectedValue);
+            
+            // Handle based on selection
+            if (selectedValue === 'sample') {
+              // Load sample model
+              this.useSampleVRMModel();
+            } else if (selectedValue === 'local') {
+              // Trigger file upload for local model
+              const fileInput = document.getElementById('vrm-file-input');
+              if (fileInput) {
+                fileInput.click();
+              } else {
+                console.error('File input element not found');
+                const statusElement = document.getElementById('status-container');
+                if (statusElement) {
+                  statusElement.textContent = 'Error: File input not found';
+                }
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing VRM controls:', error);
+        const errorContainer = document.getElementById('error-container');
+        if (errorContainer) errorContainer.textContent = `Initialization error: ${error.message}`;
+        const statusContainer = document.getElementById('status-container');
+        if (statusContainer) statusContainer.textContent = 'Failed to initialize viewer';
       }
-
-      // Upload VRM button
-      const uploadBtn = document.getElementById('upload-vrm');
-      if (uploadBtn) {
-        uploadBtn.addEventListener('click', () => {
-          if (fileInput) fileInput.click();
-        });
-      }
-
-      // Toggle rotation button
-      const toggleRotationBtn = document.getElementById('toggle-rotation');
-      if (toggleRotationBtn) {
-        toggleRotationBtn.addEventListener('click', (e) => {
-          if (this.vrmViewer) {
-            const isRotating = this.vrmViewer.toggleRotation();
-            e.target.textContent = isRotating ? 'Stop Rotation' : 'Start Rotation';
-          }
-        });
-      }
-
-      // Reset camera button
-      const resetCameraBtn = document.getElementById('reset-camera');
-      if (resetCameraBtn) {
-        resetCameraBtn.addEventListener('click', () => {
-          if (this.vrmViewer) {
-            this.vrmViewer.resetCamera();
-          }
-        });
-      }
-
-      this.vrmInitialized = true;
-      console.log('VRM controls initialized');
-    }
-
-    // Show/hide VRM controls based on toggle state
-    const vrmControls = document.getElementById('vrm-controls');
-    if (vrmControls) {
-      vrmControls.style.display = this.settings.useVRM ? 'block' : 'none';
-    }
-
-    // If VRM is enabled and no model is loaded yet, use the sample model
-    if (this.settings.useVRM && !this.currentVRMModel) {
-      setTimeout(() => {
-        this.loadSampleModelWithFallbacks();
-      }, 500);
     }
   }
 
@@ -758,29 +876,37 @@ class PopupController {
   
   // Use the sample VRM model from models directory
   useSampleVRMModel() {
-    // Use a more reliable sample VRM URL
-    const sampleVRMUrl = 'https://raw.githubusercontent.com/pixiv/three-vrm/release/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm';
-    const modelName = 'Sample VRM';
-    
     try {
       // Show status
-      const statusElement = document.getElementById('upload-status');
-      if (statusElement) {
-        statusElement.textContent = 'Loading sample VRM model...';
-        statusElement.style.color = 'var(--text-secondary)';
+      const statusContainer = document.getElementById('status-container');
+      if (statusContainer) {
+        statusContainer.textContent = 'Loading sample VRM model...';
       }
       
-      // Try to load the model in the viewer first
-      if (this.vrmViewer) {
-        this.loadSampleModelWithFallbacks(statusElement);
+      // Check if VRM viewer is initialized
+      if (!this.vrmViewer) {
+        console.error('VRM viewer not initialized');
+        if (statusContainer) {
+          statusContainer.textContent = 'VRM viewer not initialized';
+        }
+        return;
+      }
+      
+      // Try to load the model in the viewer
+      console.log('Attempting to load sample VRM model');
+      this.loadSampleModelWithFallbacks(statusContainer);
+      
+      // Also update the model-select dropdown if it exists
+      const modelSelect = document.getElementById('model-select');
+      if (modelSelect) {
+        modelSelect.value = 'sample';
       }
     } catch (error) {
       console.error('Failed to process sample VRM:', error);
       
-      const statusElement = document.getElementById('upload-status');
-      if (statusElement) {
-        statusElement.textContent = 'Failed to load sample VRM model';
-        statusElement.style.color = 'var(--error-color, #f44336)';
+      const statusContainer = document.getElementById('status-container');
+      if (statusContainer) {
+        statusContainer.textContent = 'Failed to load sample VRM model';
       }
     }
   }
@@ -791,9 +917,22 @@ class PopupController {
     const sampleVRMUrl = 'https://raw.githubusercontent.com/pixiv/three-vrm/release/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm';
     const modelName = 'Sample VRM';
     
+    // Make sure we have a valid VRM viewer
+    if (!this.vrmViewer || typeof this.vrmViewer.loadVRMFromURL !== 'function') {
+      console.error('VRM viewer not initialized or loadVRMFromURL method not available');
+      if (statusElement) {
+        statusElement.textContent = 'VRM viewer not initialized';
+        statusElement.style.color = 'var(--error-color, #f44336)';
+      }
+      return;
+    }
+    
     // Try the primary URL
     this.vrmViewer.loadVRMFromURL(sampleVRMUrl)
-      .then((vrm) => this.handleSuccessfulVRMLoad(modelName, vrm, sampleVRMUrl, 'remote', statusElement))
+      .then((vrm) => {
+        console.log('Primary sample VRM loaded successfully');
+        return this.handleSuccessfulVRMLoad(modelName, vrm, sampleVRMUrl, 'remote', statusElement);
+      })
       .catch((error) => {
         console.error('Failed to load primary sample VRM:', error);
         
@@ -801,8 +940,11 @@ class PopupController {
         const fallbackVRMUrl = chrome.runtime.getURL('models/7062840423830520603.vrm');
         console.log('Trying fallback VRM URL:', fallbackVRMUrl);
         
-        this.vrmViewer.loadVRMFromURL(fallbackVRMUrl)
-          .then((vrm) => this.handleSuccessfulVRMLoad(modelName, vrm, fallbackVRMUrl, 'local', statusElement))
+        return this.vrmViewer.loadVRMFromURL(fallbackVRMUrl)
+          .then((vrm) => {
+            console.log('Local sample VRM loaded successfully');
+            return this.handleSuccessfulVRMLoad(modelName, vrm, fallbackVRMUrl, 'local', statusElement);
+          })
           .catch((fallbackError) => {
             console.error('Failed to load fallback VRM:', fallbackError);
             
@@ -810,8 +952,11 @@ class PopupController {
             const cdnFallbackUrl = 'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@release/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm';
             console.log('Trying CDN fallback VRM URL:', cdnFallbackUrl);
             
-            this.vrmViewer.loadVRMFromURL(cdnFallbackUrl)
-              .then((vrm) => this.handleSuccessfulVRMLoad(modelName, vrm, cdnFallbackUrl, 'cdn', statusElement))
+            return this.vrmViewer.loadVRMFromURL(cdnFallbackUrl)
+              .then((vrm) => {
+                console.log('CDN sample VRM loaded successfully');
+                return this.handleSuccessfulVRMLoad(modelName, vrm, cdnFallbackUrl, 'cdn', statusElement);
+              })
               .catch((cdnError) => {
                 console.error('Failed to load CDN fallback VRM:', cdnError);
                 
@@ -819,8 +964,17 @@ class PopupController {
                   statusElement.textContent = 'Failed to load sample VRM model';
                   statusElement.style.color = 'var(--error-color, #f44336)';
                 }
+                
+                throw new Error('All VRM loading attempts failed');
               });
           });
+      })
+      .catch((finalError) => {
+        console.error('All VRM loading attempts failed:', finalError);
+        if (statusElement) {
+          statusElement.textContent = 'Failed to load any VRM model';
+          statusElement.style.color = 'var(--error-color, #f44336)';
+        }
       });
   }
   
@@ -828,25 +982,27 @@ class PopupController {
   handleSuccessfulVRMLoad(name, vrm, url, source, statusElement) {
     console.log(`${source} VRM preview loaded successfully`);
     
+    // Generate a unique ID for the model if it doesn't have one
+    const modelId = name.replace(/\s+/g, '_').toLowerCase();
+    
+    // Create a model object with all necessary data
+    const modelData = {
+      name: name,
+      id: modelId,
+      url: url,
+      source: source,
+      dateAdded: new Date().toISOString()
+    };
+    
     // Check if the model already exists
     const existingModelIndex = this.vrmModels.findIndex(model => model.name === name);
     
     if (existingModelIndex !== -1) {
       // Update existing model
-      this.vrmModels[existingModelIndex] = {
-        name: name,
-        url: url,
-        source: source,
-        dateAdded: new Date().toISOString()
-      };
+      this.vrmModels[existingModelIndex] = modelData;
     } else {
       // Add new model
-      this.vrmModels.push({
-        name: name,
-        url: url,
-        source: source,
-        dateAdded: new Date().toISOString()
-      });
+      this.vrmModels.push(modelData);
     }
     
     // Update settings
@@ -859,15 +1015,26 @@ class PopupController {
     // Update UI
     this.updateVRMModelsList();
     
-    if (statusElement) {
-      statusElement.textContent = `${name} loaded successfully!`;
-      statusElement.style.color = 'var(--success-color, #4CAF50)';
+    // Update animation controls if available
+    if (this.animationControls) {
+      this.animationControls.updateUI();
     }
     
-    // Notify content script
+    // Update status message
+    if (statusElement) {
+      if (typeof statusElement.textContent === 'string') {
+        statusElement.textContent = `${name} loaded successfully!`;
+        statusElement.style.color = 'var(--success-color, #4CAF50)';
+      } else {
+        console.log(`${name} loaded successfully!`);
+      }
+    }
+    
+    // Notify content script about the new model
     this.sendMessageToTab({
       action: 'updateVRMModel',
-      modelName: name
+      modelName: name,
+      modelData: modelData
     });
     
     return vrm;
@@ -950,6 +1117,19 @@ class PopupController {
     } catch (error) {
       console.error('Failed to initialize VRM viewer:', error);
     }
+  }
+
+  // Save VRM models to storage
+  saveVRMModels() {
+    console.log('Saving VRM models to storage:', this.vrmModels);
+    
+    // Update settings with the current VRM models list
+    this.settings.vrmModels = this.vrmModels;
+    
+    // Save settings to storage
+    this.saveSettings();
+    
+    console.log('VRM models saved to settings');
   }
 }
 

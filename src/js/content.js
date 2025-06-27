@@ -30,6 +30,18 @@ class AICompanion {
         this.init();
       } else if (message.action === 'updateVRMModel') {
         console.log('Update VRM model message received:', message.modelName);
+        
+        // Store model data if provided
+        if (message.modelData) {
+          console.log('Model data received:', message.modelData);
+          // Save the model data to local storage for persistence
+          const storageData = {};
+          storageData[`vrm_model_${message.modelName}`] = message.modelData;
+          chrome.storage.local.set(storageData, () => {
+            console.log('Model data saved to storage');
+          });
+        }
+        
         if (this.isEnabled && this.useVRM) {
           // Store the new model name
           this.selectedVrmModel = message.modelName;
@@ -215,7 +227,12 @@ class AICompanion {
     // Remove VRM avatar
     if (this.vrmAvatar) {
       // Clean up Three.js resources
-      this.vrmAvatar.dispose();
+      if (typeof this.vrmAvatar.dispose === 'function') {
+        this.vrmAvatar.dispose();
+      } else {
+        // Just remove the element if dispose function is not available
+        this.vrmAvatar.remove();
+      }
       this.vrmAvatar = null;
     }
     
@@ -241,9 +258,10 @@ class AICompanion {
     this.avatar.style.position = 'fixed';
     this.avatar.style.bottom = '20px';
     this.avatar.style.right = '20px';
-    this.avatar.style.width = '64px';
-    this.avatar.style.height = '64px';
-    this.avatar.style.borderRadius = '50%';
+    this.avatar.style.width = '90px';
+    this.avatar.style.height = '90px';
+    this.avatar.style.borderRadius = '0';
+    this.avatar.style.border = 'none';
     
     // Get the image URL
     const imageUrl = chrome.runtime.getURL(`images/avatars/${this.selectedCharacter.toLowerCase()}.gif`);
@@ -254,7 +272,7 @@ class AICompanion {
     this.avatar.style.backgroundPosition = 'center';
     this.avatar.style.cursor = 'pointer';
     this.avatar.style.zIndex = '9999';
-    this.avatar.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+    this.avatar.style.boxShadow = 'none';
     this.avatar.style.transition = 'all 0.3s ease';
     
     // Add hover effect
@@ -285,25 +303,32 @@ class AICompanion {
       container.style.position = 'fixed';
       container.style.bottom = '20px';
       container.style.right = '20px';
-      container.style.width = '150px';
-      container.style.height = '150px';
+      container.style.width = '320px'; // Updated to recommended size
+      container.style.height = '480px'; // Updated to recommended size
       container.style.zIndex = '10000';
       container.style.cursor = 'pointer';
-      container.style.borderRadius = '50%';
+      container.style.borderRadius = '0';
       container.style.overflow = 'hidden';
-      container.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-      container.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+      container.style.boxShadow = 'none';
+      container.style.border = 'none';
       
       document.body.appendChild(container);
       this.vrmAvatar = container;
       
       // Load Three.js and VRM libraries
-      await this.loadThreeJsLibraries();
+      try {
+        await this.loadThreeJsLibraries();
+      } catch (error) {
+        console.error('Failed to load Three.js libraries:', error);
+        this.createFallbackVRMAvatar();
+        return;
+      }
       
       // Check if THREE is available
       if (!window.THREE) {
         console.error('THREE is not defined after loading libraries');
-        throw new Error('THREE is not available');
+        this.createFallbackVRMAvatar();
+        return;
       }
       
       // Create basic Three.js scene
@@ -311,18 +336,30 @@ class AICompanion {
       const scene = new THREE.Scene();
       
       // Create camera
-      const camera = new THREE.PerspectiveCamera(30.0, 1, 0.1, 20.0);
+      const camera = new THREE.PerspectiveCamera(
+        45,
+        320/480, // Updated aspect ratio
+        0.1,
+        1000
+      );
       camera.position.set(0.0, 1.0, 5.0);
       camera.lookAt(0.0, 1.0, 0.0);
       
       // Create renderer
-      const renderer = new THREE.WebGLRenderer({
-        alpha: true,
-        antialias: true
-      });
-      renderer.setSize(150, 150);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setClearColor(0x000000, 0);
+      let renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({
+          alpha: true,
+          antialias: true
+        });
+        renderer.setSize(320, 480); // Updated to recommended size
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0x000000, 0);
+      } catch (error) {
+        console.error('Failed to create WebGL renderer:', error);
+        this.createFallbackVRMAvatar();
+        return;
+      }
       
       // Clear container
       while (container.firstChild) {
@@ -342,36 +379,36 @@ class AICompanion {
       
       // Determine model URL
       let modelUrl;
-      if (this.selectedVrmModel === '7062840423830520603') {
-        // Use direct URL to the VRM file instead of loading from storage
+      if (this.selectedVrmModel === 'Sample VRM') {
+        // Use direct URL to the sample VRM file
         modelUrl = chrome.runtime.getURL('models/7062840423830520603.vrm');
-        console.log('Using direct URL to VRM model:', modelUrl);
+        console.log('Using sample VRM model:', modelUrl);
       } else {
         // For other models, try to load from storage
         try {
-          const modelKey = `vrm_model_${this.selectedVrmModel}`;
+          // Get the model data from storage
           const result = await new Promise(resolve => {
-            chrome.storage.local.get([modelKey], resolve);
+            chrome.storage.local.get(['settings'], resolve);
           });
           
-          const modelData = result[modelKey];
-          if (!modelData) {
-            console.error('Selected VRM model data not found:', this.selectedVrmModel);
+          const settings = result.settings || {};
+          const vrmModels = settings.vrmModels || [];
+          
+          // Find the selected model in the list
+          const selectedModel = vrmModels.find(model => model.name === this.selectedVrmModel);
+          
+          if (!selectedModel) {
+            console.error('Selected VRM model not found in settings:', this.selectedVrmModel);
             // Fall back to the sample model
             modelUrl = chrome.runtime.getURL('models/7062840423830520603.vrm');
             console.log('Falling back to sample VRM model');
           } else {
-            // Convert base64 to blob URL
-            const binary = atob(modelData.data);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-              bytes[i] = binary.charCodeAt(i);
-            }
-            const blob = new Blob([bytes.buffer], { type: 'application/octet-stream' });
-            modelUrl = URL.createObjectURL(blob);
+            // Use the URL from the model data
+            console.log('Found model in settings:', selectedModel);
+            modelUrl = selectedModel.url;
           }
         } catch (error) {
-          console.error('Error loading model from storage:', error);
+          console.error('Error loading model from settings:', error);
           // Fall back to the sample model
           modelUrl = chrome.runtime.getURL('models/7062840423830520603.vrm');
           console.log('Falling back to sample VRM model due to error');
@@ -408,16 +445,21 @@ class AICompanion {
       let currentVRM = null;
       
       // Load the model
-      console.log('Loading VRM model...');
+      console.log('Loading VRM model from URL:', modelUrl);
+      console.log('THREE.js version:', window.THREE ? window.THREE.REVISION : 'not loaded');
+      console.log('VRMLoaderPlugin available:', !!window.VRMLoaderPlugin || !!window.THREE.VRMLoaderPlugin);
+      
       loader.load(
         modelUrl,
         (gltf) => {
           console.log('VRM model loaded:', gltf);
+          console.log('VRM model userData:', gltf.userData);
           
           // Check if we have VRM in userData
           if (gltf.userData && gltf.userData.vrm) {
             currentVRM = gltf.userData.vrm;
             console.log('VRM found in userData:', currentVRM);
+            console.log('VRM version:', currentVRM.meta ? currentVRM.meta.version : 'unknown');
             
             // Apply VRM optimizations if available
             if (window.THREE.VRMUtils) {
@@ -548,6 +590,11 @@ class AICompanion {
       };
       
       console.log('VRM avatar created successfully');
+      
+      // Position speech bubble if it exists
+      if (this.speechBubble) {
+        this.positionSpeechBubble();
+      }
     } catch (error) {
       console.error('Error creating VRM avatar:', error);
       
@@ -570,6 +617,24 @@ class AICompanion {
     console.log('Creating simple 3D avatar');
     
     try {
+      // Check if container exists, if not create one
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'ai-companion-vrm';
+        container.style.position = 'fixed';
+        container.style.bottom = '20px';
+        container.style.right = '20px';
+        container.style.width = '320px'; // Updated to recommended size
+        container.style.height = '480px'; // Updated to recommended size
+        container.style.zIndex = '10000';
+        container.style.cursor = 'pointer';
+        container.style.borderRadius = '0';
+        container.style.overflow = 'hidden';
+        container.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+        document.body.appendChild(container);
+        this.vrmAvatar = container;
+      }
+      
       if (!window.THREE) {
         throw new Error('THREE is not available');
       }
@@ -582,18 +647,18 @@ class AICompanion {
       // Create camera
       const camera = new THREE.PerspectiveCamera(
         45,
-        1, // Square aspect ratio
+        320/480, // Updated aspect ratio
         0.1,
         1000
       );
       camera.position.z = 5;
       
       // Create renderer
-      const renderer = new THREE.WebGLRenderer({ 
+      const renderer = new THREE.WebGLRenderer({
         alpha: true,
         antialias: true
       });
-      renderer.setSize(150, 150);
+      renderer.setSize(320, 480); // Updated to recommended size
       renderer.setClearColor(0x000000, 0); // Transparent background
       
       // Clear container
@@ -699,15 +764,44 @@ class AICompanion {
       console.log('Loading Three.js and VRM libraries');
       
       // Load the bundled JavaScript from dist directory
-      await this.loadScript(chrome.runtime.getURL('dist/vrm-bundle.js'));
-      console.log('Three.js and VRM bundle loaded');
+      const bundlePath = chrome.runtime.getURL('dist/vrm-bundle.js');
+      console.log('Loading bundle from:', bundlePath);
       
-      // Wait for bundle to be initialized
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // First check if THREE is already defined
+      if (window.THREE) {
+        console.log('THREE is already defined, using existing instance');
+        return;
+      }
+      
+      // Load the script
+      await this.loadScript(bundlePath);
+      console.log('Bundle script loaded, waiting for initialization');
+      
+      // Wait for bundle to be initialized with a longer timeout
+      await new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 20;
+        
+        const checkThree = () => {
+          attempts++;
+          if (window.THREE) {
+            console.log('THREE.js loaded successfully after', attempts, 'attempts');
+            resolve();
+          } else if (attempts >= maxAttempts) {
+            reject(new Error('THREE.js failed to load after multiple attempts'));
+          } else {
+            console.log('Waiting for THREE.js to load, attempt', attempts);
+            setTimeout(checkThree, 200);
+          }
+        };
+        
+        checkThree();
+      });
       
       // Verify that the necessary objects exist
       if (!window.THREE) {
         console.error('THREE is not defined after loading libraries');
+        throw new Error('THREE is not available');
       } else {
         console.log('THREE is available:', typeof window.THREE);
         
@@ -790,8 +884,8 @@ class AICompanion {
     this.vrmAvatar.style.position = 'fixed';
     this.vrmAvatar.style.bottom = '20px';
     this.vrmAvatar.style.right = '20px';
-    this.vrmAvatar.style.width = '150px';
-    this.vrmAvatar.style.height = '150px';
+    this.vrmAvatar.style.width = '320px'; // Updated to recommended size
+    this.vrmAvatar.style.height = '480px'; // Updated to recommended size
     this.vrmAvatar.style.zIndex = '10000';
     this.vrmAvatar.style.cursor = 'pointer';
     
@@ -801,7 +895,7 @@ class AICompanion {
     const fallbackContainer = document.createElement('div');
     fallbackContainer.style.width = '100%';
     fallbackContainer.style.height = '100%';
-    fallbackContainer.style.borderRadius = '50%';
+    fallbackContainer.style.borderRadius = '0'; // Removed circular border
     fallbackContainer.style.overflow = 'hidden';
     fallbackContainer.style.backgroundColor = '#3498db';
     fallbackContainer.style.display = 'flex';
@@ -810,8 +904,8 @@ class AICompanion {
     fallbackContainer.style.justifyContent = 'center';
     fallbackContainer.style.color = 'white';
     fallbackContainer.style.fontWeight = 'bold';
-    fallbackContainer.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-    fallbackContainer.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+    fallbackContainer.style.boxShadow = 'none';
+    fallbackContainer.style.border = 'none';
     
     const icon = document.createElement('div');
     icon.textContent = '3D';
@@ -1025,39 +1119,70 @@ class AICompanion {
       this.speechBubble.style.bottom = `${viewportHeight - rect.top + 10}px`;
       this.speechBubble.classList.add('bubble-above');
       
-      // Position horizontally
-      if (rect.left < viewportWidth / 2) {
-        // Avatar on left side of screen
-        this.speechBubble.style.left = `${rect.left}px`;
-        pointer.style.left = '20px';
+      // Position horizontally - center over VRM avatar if using VRM
+      if (this.useVRM) {
+        const bubbleWidth = 280; // Approximate width of speech bubble
+        const leftPosition = rect.left + (rect.width / 2) - (bubbleWidth / 2);
+        this.speechBubble.style.left = `${Math.max(10, leftPosition)}px`;
+        // Ensure bubble doesn't go off-screen to the right
+        if (leftPosition + bubbleWidth > viewportWidth - 10) {
+          this.speechBubble.style.left = null;
+          this.speechBubble.style.right = '10px';
+        }
+        pointer.style.left = '50%';
+        pointer.style.transform = 'translateX(-50%) rotate(45deg)';
       } else {
-        // Avatar on right side of screen
-        this.speechBubble.style.right = `${viewportWidth - rect.right}px`;
-        pointer.style.right = '20px';
+        // Standard positioning for regular avatar
+        if (rect.left < viewportWidth / 2) {
+          // Avatar on left side of screen
+          this.speechBubble.style.left = `${rect.left}px`;
+          pointer.style.left = '20px';
+        } else {
+          // Avatar on right side of screen
+          this.speechBubble.style.right = `${viewportWidth - rect.right}px`;
+          pointer.style.right = '20px';
+        }
+        pointer.style.transform = 'rotate(45deg)';
       }
       
       // Style pointer for above position
       pointer.style.bottom = '-6px';
-      pointer.style.transform = 'rotate(45deg)';
     } else {
       // Show bubble below avatar
-      this.speechBubble.style.top = `${rect.bottom + 10}px`;
-      this.speechBubble.classList.add('bubble-below');
-      
-      // Position horizontally
-      if (rect.left < viewportWidth / 2) {
-        // Avatar on left side of screen
-        this.speechBubble.style.left = `${rect.left}px`;
-        pointer.style.left = '20px';
+      if (this.useVRM) {
+        // For VRM, position at the top of the avatar with enough space
+        this.speechBubble.style.top = `${rect.top + 20}px`;
+        
+        // Center horizontally over the VRM avatar
+        const bubbleWidth = 280; // Approximate width of speech bubble
+        const leftPosition = rect.left + (rect.width / 2) - (bubbleWidth / 2);
+        this.speechBubble.style.left = `${Math.max(10, leftPosition)}px`;
+        // Ensure bubble doesn't go off-screen to the right
+        if (leftPosition + bubbleWidth > viewportWidth - 10) {
+          this.speechBubble.style.left = null;
+          this.speechBubble.style.right = '10px';
+        }
+        pointer.style.left = '50%';
+        pointer.style.transform = 'translateX(-50%) rotate(225deg)';
       } else {
-        // Avatar on right side of screen
-        this.speechBubble.style.right = `${viewportWidth - rect.right}px`;
-        pointer.style.right = '20px';
+        // Standard positioning for regular avatar
+        this.speechBubble.style.top = `${rect.bottom + 10}px`;
+        
+        // Position horizontally
+        if (rect.left < viewportWidth / 2) {
+          // Avatar on left side of screen
+          this.speechBubble.style.left = `${rect.left}px`;
+          pointer.style.left = '20px';
+        } else {
+          // Avatar on right side of screen
+          this.speechBubble.style.right = `${viewportWidth - rect.right}px`;
+          pointer.style.right = '20px';
+        }
+        pointer.style.transform = 'rotate(225deg)';
       }
       
       // Style pointer for below position
       pointer.style.top = '-6px';
-      pointer.style.transform = 'rotate(225deg)';
     }
     
     // Add pointer to speech bubble
@@ -1250,6 +1375,13 @@ class AICompanion {
     
     // Position the speech bubble relative to avatar
     this.positionSpeechBubble();
+    
+    // Add special class if using VRM
+    if (this.useVRM && this.vrmAvatar) {
+      this.speechBubble.classList.add('vrm-speech-bubble');
+    } else {
+      this.speechBubble.classList.remove('vrm-speech-bubble');
+    }
     
     // Set message text
     if (this.speechBubbleContent) {
